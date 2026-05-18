@@ -74,6 +74,58 @@ describe('MCPClient', () => {
     expect(headers['Mcp-Session-Id']).toBe('session-xyz');
   });
 
+  it('forwards extraHeaders on every request', async () => {
+    const calls: RecordedCall[] = [];
+    const client = new MCPClient({
+      endpoint: 'https://mcp.example.test',
+      extraHeaders: {
+        'CF-Access-Client-Id': 'cid-abc',
+        'CF-Access-Client-Secret': 'csec-xyz', // pragma: allowlist secret
+      },
+      fetch: makeFetch(
+        (call) => {
+          const body = JSON.parse((call.init.body as string) ?? '{}');
+          return new Response(
+            JSON.stringify({ jsonrpc: '2.0', id: body.id, result: { content: [{ type: 'text', text: '{}' }] } }),
+            { status: 200, headers: { 'Mcp-Session-Id': 'session-xyz' } },
+          );
+        },
+        calls,
+      ),
+    });
+
+    await client.callTool('list_archetypes', {});
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    for (const call of calls) {
+      const headers = call.init.headers as Record<string, string>;
+      expect(headers['CF-Access-Client-Id']).toBe('cid-abc');
+      expect(headers['CF-Access-Client-Secret']).toBe('csec-xyz');
+    }
+  });
+
+  it('extraHeaders cannot override protocol or auth headers', async () => {
+    const calls: RecordedCall[] = [];
+    const client = new MCPClient({
+      endpoint: 'https://mcp.example.test',
+      apiKey: 'real-key', // pragma: allowlist secret
+      extraHeaders: {
+        'Content-Type': 'text/plain',
+        'X-ALTER-API-Key': 'spoofed-key', // pragma: allowlist secret
+        'X-Custom': 'allowed',
+      },
+      fetch: makeFetch(
+        () => new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: {} }), { status: 200 }),
+        calls,
+      ),
+    });
+
+    await client.initialize();
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers['X-ALTER-API-Key']).toBe('real-key');
+    expect(headers['X-Custom']).toBe('allowed');
+  });
+
   it('raises AlterToolError on JSON-RPC error', async () => {
     const client = new MCPClient({
       endpoint: 'https://mcp.example.test',
@@ -88,7 +140,7 @@ describe('MCPClient', () => {
         );
       }),
     });
-    await expect(client.callTool('verify_identity', { candidate_id: 'x' })).rejects.toBeInstanceOf(AlterToolError);
+    await expect(client.callTool('verify_identity', { member_id: 'x' })).rejects.toBeInstanceOf(AlterToolError);
   });
 
   it('raises AlterAuthError on HTTP 401', async () => {

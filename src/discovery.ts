@@ -64,7 +64,12 @@ export async function discover(domain: string, opts: DiscoveryOptions = {}): Pro
     try {
       const dnsHit = await tryDns(host);
       if (dnsHit) {
-        const result: DiscoveryResult = { url: dnsHit, transport: 'streamable-http', source: 'dns' };
+        const parsed = validateDiscoveredUrl(dnsHit, 'dns');
+        const result: DiscoveryResult = {
+          url: parsed.toString().replace(/\/$/, ''),
+          transport: 'streamable-http',
+          source: 'dns',
+        };
         if (cache) _cache.set(host, result);
         return result;
       }
@@ -115,6 +120,41 @@ function normaliseDomain(input: string): string {
   host = host.split(':')[0];
   if (!host) throw new AlterDiscoveryError(`Empty domain: "${input}"`);
   return host;
+}
+
+/**
+ * Validate a URL returned from DNS TXT or `.well-known` discovery before
+ * accepting it as an MCP endpoint. sdk/W-4 pentest 2026-04-17.
+ *
+ * - Requires `https:` (rejects `http:` and any non-https scheme).
+ * - Rejects `user:pass@host` — Basic-auth credentials in a discovery doc
+ *   would leak to whatever host sits behind them.
+ * - Requires a non-empty hostname.
+ *
+ * Throws {@link AlterDiscoveryError} on any violation; returns the parsed
+ * `URL` on success so callers can re-use the normalised form.
+ */
+function validateDiscoveredUrl(url: string, source: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new AlterDiscoveryError(`${source}: malformed URL ${url}`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new AlterDiscoveryError(
+      `${source}: non-https MCP endpoint rejected (got ${parsed.protocol}//${parsed.hostname})`,
+    );
+  }
+  if (parsed.username || parsed.password) {
+    throw new AlterDiscoveryError(
+      `${source}: MCP endpoint must not contain userinfo (user:pass@host)`,
+    );
+  }
+  if (!parsed.hostname) {
+    throw new AlterDiscoveryError(`${source}: MCP endpoint missing hostname`);
+  }
+  return parsed;
 }
 
 async function tryDns(host: string): Promise<string | null> {
@@ -201,16 +241,19 @@ async function tryWellKnown(
     // mcp.json may carry remotes[] or a top-level url
     const remotes = (doc.remotes as Array<{ url?: string; transportType?: string }>) || [];
     const remote = remotes.find((r) => r.transportType === 'streamable-http' || r.transportType === 'http');
-    const url = remote?.url || (doc.url as string | undefined);
-    if (!url) return null;
-    return { url, transport: 'streamable-http', source: 'mcp.json', raw: doc };
+    const rawUrl = remote?.url || (doc.url as string | undefined);
+    if (!rawUrl) return null;
+    const parsed = validateDiscoveredUrl(rawUrl, 'mcp.json');
+    return { url: parsed.toString().replace(/\/$/, ''), transport: 'streamable-http', source: 'mcp.json', raw: doc };
   }
 
   // alter.json — { v, mcp, pk, x402, cap, ... }
   const mcpHost = doc.mcp as string | undefined;
   if (!mcpHost) return null;
+  const normalised = ensureMcpPath(mcpHost);
+  validateDiscoveredUrl(normalised, 'alter.json');
   return {
-    url: ensureMcpPath(mcpHost),
+    url: normalised,
     transport: 'streamable-http',
     source: 'alter.json',
     publicKey: doc.pk as string | undefined,

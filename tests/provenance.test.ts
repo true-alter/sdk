@@ -197,6 +197,74 @@ describe('resolveVerifyAt — hostname allowlist (C-4 defence)', () => {
       /unsupported scheme/,
     );
   });
+
+  it('rejects URLs with userinfo even when hostname is allowlisted (sdk/M-1)', () => {
+    expect(() =>
+      // pragma: allowlist nextline secret
+      resolveVerifyAt('https://user:secret@api.truealter.com/.well-known/alter-keys.json'),
+    ).toThrow(/userinfo/);
+    expect(() =>
+      // pragma: allowlist nextline secret
+      resolveVerifyAt('https://leak@mcp.truealter.com/.well-known/alter-keys.json'),
+    ).toThrow(/userinfo/);
+  });
+});
+
+describe('fetchJwks — body-size cap and cache bounds (sdk/H-2 + M-2)', () => {
+  async function buildValidEnvelope(): Promise<{
+    token: string;
+    jwks: { keys: unknown[] };
+    envelope: Record<string, unknown>;
+  }> {
+    const now = Math.floor(Date.now() / 1000);
+    const payload: ProvenancePayload = {
+      iss: 'did:alter:platform',
+      iat: now,
+      exp: now + 3600,
+      purpose: 'trait_profile',
+      tool: 'assess_traits',
+      blast_radius: 'medium',
+      data_hash: 'abc',
+      requester: '0xreq',
+      jti: 'prov_cap',
+    };
+    const { token, jwks } = await buildSignedToken(payload);
+    return {
+      token,
+      jwks,
+      envelope: {
+        version: '1',
+        token,
+        verify_at: 'https://api.truealter.com/.well-known/alter-keys.json',
+      },
+    };
+  }
+
+  it('rejects oversize JWKS body advertised via Content-Length', async () => {
+    const { envelope } = await buildValidEnvelope();
+    const fetchImpl: typeof fetch = (async () =>
+      new Response('{"keys":[]}', {
+        status: 200,
+        headers: { 'content-length': String(128 * 1024) },
+      })) as typeof fetch;
+
+    const result = await verifyProvenance(envelope as never, { fetch: fetchImpl });
+    expect(result.valid).toBe(false);
+    expect(result.reason).toMatch(/JWKS too large/);
+  });
+
+  it('rejects oversize JWKS body when Content-Length is absent', async () => {
+    const { envelope } = await buildValidEnvelope();
+    // Pad to ~96KB of padding bytes around a plausible keys array — no
+    // Content-Length header set so the text-length fallback must catch it.
+    const huge = JSON.stringify({ keys: [], pad: 'x'.repeat(96 * 1024) });
+    const fetchImpl: typeof fetch = (async () =>
+      new Response(huge, { status: 200 })) as typeof fetch;
+
+    const result = await verifyProvenance(envelope as never, { fetch: fetchImpl });
+    expect(result.valid).toBe(false);
+    expect(result.reason).toMatch(/JWKS too large/);
+  });
 });
 
 describe('verifyProvenance — allowlist integration', () => {

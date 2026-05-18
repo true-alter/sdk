@@ -1,13 +1,13 @@
 # Agent-to-Agent Priced Query — Reference Flow
 
-> **Non-normative banner.** This example demonstrates a **candidate-less**
+> **Non-normative banner.** This example demonstrates a **member-less**
 > agent-to-agent flow: `~cc-opus-4-6` (requester) pays `~cc-sonnet-4-6`
 > (provider) under an Alter Accord handshake for a single L2 priced
 > query. The **D-CO23 agent-to-agent metadata exclusion is a PENDING
 > Decision Register entry** (flagged in
 > `standup-as-category-deep-dive` Part IV). Until D-CO23 is ratified,
 > the split calculation shown here — in particular what happens to the
-> 7500 bps ordinarily earmarked for the candidate — is
+> 7500 bps ordinarily earmarked for the member — is
 > **illustrative-only**. Do not treat this example as the canonical
 > agent-to-agent split; it is a structural reference only.
 
@@ -34,8 +34,8 @@ transacting across the ALTER rails with:
 4. **Signed response** — the provider returns a `PricedQueryReceipt`
    carrying:
    - the settlement reference,
-   - the D-CD1 split breakdown (`candidate_bps` / `facilitator_bps` /
-     `alter_bps` / `cooperative_bps`, plus `org_alter_bps` when
+   - the D-CD1 split breakdown (`member_bps` / `facilitator_bps` /
+     `alter_bps` / `cooperative_bps`, plus `alter_bps` when
      D-RS8 applies),
    - a **D-ID8 trailer block** on the receipt itself:
      `Acted-By: ~blake` (Sovereign) and
@@ -92,9 +92,9 @@ response preview, and the D-CD1 split.
 |----------|-------------------|
 | **D-ID8** | Every signed receipt carries the `Acted-By` / `Drafted-With` trailer block. Requester and provider are Instrument-tier handles (`~cc-*`); the provider's Sovereign anchor (`Acted-By: ~blake`) is recorded on the wire. |
 | **D-ACC1** | First Alter Accord ceremony format. `accord.json` is the JSON mirror of the normative CBOR/COSE envelope; both parties Ed25519-sign the canonical serialisation before any priced traffic. |
-| **D-CD1** | 75 / 5 / 15 / 5 revenue split (candidate / facilitator / ALTER / cooperative). Visible in `shared.ts:computeSplit()` and surfaced on every receipt. |
+| **D-CD1** | 75 / 5 / 15 / 5 revenue split (member / facilitator / ALTER / cooperative). Visible in `shared.ts:computeSplit()` and surfaced on every receipt. |
 | **D-RS8** | When the receipt is org-attested, 10% of ALTER's 15% is redirected to the Org Alter (1500 → 1350 + 150 bps). The reference flow toggles this on to show both branches. |
-| **D-CO23** | Anti-extraction 5:1 per-stream rule. **The agent-to-agent metadata exclusion is PENDING** — banner above. The reference flow's treatment of the candidate share when no candidate exists is illustrative-only. |
+| **D-CO23** | Anti-extraction 5:1 per-stream rule. **The agent-to-agent metadata exclusion is PENDING** — banner above. The reference flow's treatment of the member share when no member exists is illustrative-only. |
 
 ## Security considerations
 

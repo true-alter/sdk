@@ -14,7 +14,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { argv, exit, stderr, stdout, env } from 'node:process';
+import { argv, exit, stderr, stdin, stdout, env } from 'node:process';
+import { createInterface } from 'node:readline';
 
 import { AlterClient } from '../src/client.js';
 import type { MCPCallToolResult } from '../src/mcp.js';
@@ -22,8 +23,17 @@ import { discover } from '../src/discovery.js';
 import { generateKeypair, keypairFromPrivateKey, type Ed25519Keypair } from '../src/auth.js';
 import { generateClaudeConfig } from '../src/adapters/claude-code.js';
 import { generateCursorConfig } from '../src/adapters/cursor.js';
+import { generateClaudeDesktopConfig } from '../src/adapters/claude-desktop.js';
 import { generateGenericMcpConfig } from '../src/adapters/generic-mcp.js';
-import { SDK_NAME, SDK_VERSION } from '../src/index.js';
+import { SDK_NAME, SDK_VERSION } from '../src/meta.js';
+import {
+  wire,
+  unwire,
+  probeAll,
+  type ClientId,
+  type WireReport,
+  type UnwireReport,
+} from '../src/wire/index.js';
 
 interface ConfigFile {
   endpoint?: string;
@@ -50,6 +60,12 @@ async function main(): Promise<void> {
     case 'config':
       await runConfig(rest);
       break;
+    case 'wire':
+      await runWire(rest);
+      break;
+    case 'unwire':
+      await runUnwire();
+      break;
     case 'message':
       await runMessage(rest);
       break;
@@ -75,11 +91,15 @@ function printHelp(): void {
   stdout.write(`${SDK_NAME} ${SDK_VERSION}
 
 Usage:
-  alter-identity init                       Generate Ed25519 keypair, discover MCP, write config
+  alter-identity init [--wire|--no-wire] [--yes]
+                                            Generate keypair, discover MCP, optionally wire detected AI clients
   alter-identity verify <~handle|email>     Verify an identity
   alter-identity status                     Show connection state
-  alter-identity config [--claude|--cursor|--generic]
+  alter-identity config [--claude|--cursor|--claude-desktop|--generic]
                                             Print MCP config snippet
+  alter-identity wire [--only=<ids>] [--yes]
+                                            Merge ALTER into detected AI clients (Claude Code, Cursor, Claude Desktop)
+  alter-identity unwire                     Restore every target from its backup sibling
 
 Alter-to-Alter Messaging:
   alter-identity message send <~handle> <body>     Send a direct message (body '-' = stdin)
@@ -94,6 +114,14 @@ Config: ${CONFIG_PATH}
 
 async function runInit(args: string[]): Promise<void> {
   const force = args.includes('--force') || args.includes('-f');
+  const wireFlag = args.includes('--wire');
+  const noWireFlag = args.includes('--no-wire');
+  const yesFlag = args.includes('--yes') || args.includes('-y');
+  if (wireFlag && noWireFlag) {
+    stderr.write('error: --wire and --no-wire are mutually exclusive\n');
+    exit(2);
+  }
+
   const existing = readConfig();
   if (existing && !force) {
     stdout.write(`already initialised at ${CONFIG_PATH} (re-run with --force to overwrite)\n`);
@@ -118,6 +146,31 @@ async function runInit(args: string[]): Promise<void> {
   writeConfig(cfg);
   stdout.write(`• Wrote config to ${CONFIG_PATH}\n`);
   stdout.write(`  did: ${keypair.did}\n`);
+
+  // Wire decision. --no-wire wins silently; --wire/--yes wires without
+  // prompting; no flag + TTY prompts; no flag + non-TTY skips.
+  let shouldWire = false;
+  if (noWireFlag) {
+    shouldWire = false;
+  } else if (wireFlag || yesFlag) {
+    shouldWire = true;
+  } else if (stdin.isTTY) {
+    const probes = probeAll();
+    const found = probes.filter((p) => p.installed).map((p) => p.client.label);
+    if (found.length === 0) {
+      stdout.write('\nNo MCP-aware clients detected on this machine — skipping wire.\n');
+    } else {
+      stdout.write(`\nDetected MCP-aware clients: ${found.join(', ')}\n`);
+      shouldWire = await confirm('Wire detected AI clients to ALTER?', true);
+    }
+  }
+
+  if (shouldWire) {
+    stdout.write('\n• Wiring detected AI clients...\n');
+    const report = wire({ endpoint });
+    printWireReport(report);
+  }
+
   stdout.write(`\nNext: alter-identity verify ~truealter\n`);
 }
 
@@ -170,9 +223,117 @@ async function runConfig(args: string[]): Promise<void> {
   const opts = { endpoint: cfg.endpoint, apiKey: cfg.apiKey };
   let out: unknown;
   if (args.includes('--cursor')) out = generateCursorConfig(opts);
+  else if (args.includes('--claude-desktop')) out = generateClaudeDesktopConfig(opts);
   else if (args.includes('--generic')) out = generateGenericMcpConfig(opts);
   else out = generateClaudeConfig(opts); // default
   stdout.write(JSON.stringify(out, null, 2) + '\n');
+}
+
+async function runWire(args: string[]): Promise<void> {
+  const yesFlag = args.includes('--yes') || args.includes('-y');
+  const onlyArg = args.find((a) => a.startsWith('--only='));
+  const only = onlyArg
+    ? (onlyArg.slice('--only='.length).split(',').filter(Boolean) as ClientId[])
+    : undefined;
+
+  const cfg = readConfig() ?? {};
+  if (!cfg.endpoint) {
+    stderr.write('error: no endpoint — run `alter-identity init` first\n');
+    exit(2);
+  }
+
+  if (!yesFlag && stdin.isTTY) {
+    const probes = probeAll();
+    const found = probes.filter((p) => p.installed).map((p) => p.client.label);
+    if (found.length === 0) {
+      stdout.write('No MCP-aware clients detected on this machine. Nothing to do.\n');
+      return;
+    }
+    stdout.write(`Detected: ${found.join(', ')}\n`);
+    const proceed = await confirm('Wire these clients to ALTER?', true);
+    if (!proceed) {
+      stdout.write('aborted.\n');
+      return;
+    }
+  }
+
+  const report = wire({ endpoint: cfg.endpoint, apiKey: cfg.apiKey, only });
+  printWireReport(report);
+}
+
+async function runUnwire(): Promise<void> {
+  const report = unwire();
+  printUnwireReport(report);
+}
+
+function printWireReport(report: WireReport): void {
+  for (const target of report.state.targets) {
+    const tag = `[${target.client}]`;
+    switch (target.status) {
+      case 'written':
+        if (target.method === 'file') {
+          stdout.write(`  ✓ ${tag} wrote ${target.path} (backup: ${target.backupPath ?? '(none — created new file)'})\n`);
+        } else {
+          stdout.write(`  ✓ ${tag} registered via \`${target.command}\`\n`);
+        }
+        break;
+      case 'already-wired':
+        stdout.write(`  · ${tag} already wired — no change\n`);
+        break;
+      case 'skipped':
+        stdout.write(`  - ${tag} skipped (${target.reason ?? 'not installed'})\n`);
+        break;
+      case 'failed':
+        stderr.write(`  ✗ ${tag} failed: ${target.reason ?? 'unknown'}\n`);
+        break;
+    }
+  }
+  stdout.write(`\nwire-state → ${join(env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'alter', 'wire-state.json')}\n`);
+  stdout.write('run `alter-identity unwire` to reverse.\n');
+}
+
+function printUnwireReport(report: UnwireReport): void {
+  if (!report.state) {
+    stdout.write('nothing to unwire — no wire-state.json found\n');
+    return;
+  }
+  if (report.state.targets.length === 0) {
+    stdout.write('wire-state.json is empty — nothing to unwire\n');
+    return;
+  }
+  for (const entry of report.undone) {
+    const tag = `[${entry.client}]`;
+    switch (entry.action) {
+      case 'restored':
+        stdout.write(`  ✓ ${tag} restored from backup\n`);
+        break;
+      case 'removed':
+        stdout.write(`  ✓ ${tag} removed (file was created by wire)\n`);
+        break;
+      case 'cli-removed':
+        stdout.write(`  ✓ ${tag} removed via \`claude mcp remove\`\n`);
+        break;
+      case 'skipped':
+        stdout.write(`  · ${tag} skipped (${entry.reason ?? ''})\n`);
+        break;
+      case 'failed':
+        stderr.write(`  ✗ ${tag} failed: ${entry.reason ?? ''}\n`);
+        break;
+    }
+  }
+}
+
+async function confirm(question: string, defaultYes: boolean): Promise<boolean> {
+  if (!stdin.isTTY) return false;
+  const rl = createInterface({ input: stdin, output: stdout });
+  const suffix = defaultYes ? ' [Y/n] ' : ' [y/N] ';
+  const answer = await new Promise<string>((resolve) => {
+    rl.question(question + suffix, (ans) => resolve(ans));
+  });
+  rl.close();
+  const trimmed = answer.trim().toLowerCase();
+  if (!trimmed) return defaultYes;
+  return trimmed === 'y' || trimmed === 'yes';
 }
 
 // ── Alter-to-Alter Messaging ────────────────────────────────────────────

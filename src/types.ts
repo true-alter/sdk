@@ -61,8 +61,41 @@ export interface MCPResponse<T> {
 }
 
 // =============================================================================
-// Free tools (L0 — 28 tools)
+// Free tools (L0 — 24 tools)
 // =============================================================================
+
+/** (free) hello_agent — First handshake: returns server version, auth status, trust tier, tool counts */
+export interface HelloAgentInput {}
+
+/** (free) hello_agent — output */
+export interface HelloAgentOutput {
+  ok: boolean;
+  server?: string;
+  version?: string;
+  authenticated?: boolean;
+  tier?: string;
+  tools?: {
+    free?: number;
+    premium?: number;
+    messaging?: number;
+  };
+}
+
+/** (free) alter_resolve_handle — Resolve a ~handle (e.g. ~drew) to canonical form and kind */
+export interface AlterResolveHandleInput {
+  query: string;
+}
+
+/** (free) alter_resolve_handle — output */
+export interface AlterResolveHandleOutput {
+  ok: boolean;
+  handle: string | null;
+  kind?: "system" | "personal" | "role_alias" | string;
+  status: "found" | "not_found" | "invalid_format";
+  addressable: boolean;
+  default_visibility?: string;
+  query?: string;
+}
 
 /** (free) list_archetypes — List all 12 ALTER identity archetypes */
 export interface ListArchetypesInput {}
@@ -79,7 +112,7 @@ export interface ListArchetypesOutput {
 
 /** (free) verify_identity — Verify a person is registered with ALTER and validate optional claims */
 export interface VerifyIdentityInput {
-  candidate_id: string;
+  member_id: string;
   email?: string;
   claims?: {
     archetype?: string;
@@ -92,7 +125,7 @@ export interface VerifyIdentityInput {
 export interface VerifyIdentityOutput {
   ok: boolean;
   verified: boolean;
-  candidate_id?: string;
+  member_id?: string;
   engagement_level?: EngagementLevel;
   archetype?: Archetype;
   claims_valid?: boolean;
@@ -115,7 +148,7 @@ export interface InitiateAssessmentOutput {
 
 /** (free) get_engagement_level — Get a person's identity depth and available query tiers */
 export interface GetEngagementLevelInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_engagement_level — output */
@@ -134,13 +167,13 @@ export interface GetEngagementLevelOutput {
 
 /** (free) get_profile — Get a person's profile summary */
 export interface GetProfileInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_profile — output */
 export interface GetProfileOutput {
   ok: boolean;
-  candidate_id: string;
+  member_id: string;
   assessment_phase?: string;
   archetype?: Archetype;
   engagement_level?: EngagementLevel;
@@ -149,7 +182,7 @@ export interface GetProfileOutput {
 
 /** (free) query_matches — Query matches for a person (tier labels only) */
 export interface QueryMatchesInput {
-  candidate_id: string;
+  member_id: string;
   quality_filter?: MatchTier;
   limit?: number;
 }
@@ -168,7 +201,7 @@ export interface QueryMatchesOutput {
 
 /** (free) get_competencies — Get a person's competency portfolio */
 export interface GetCompetenciesInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_competencies — output */
@@ -182,46 +215,6 @@ export interface GetCompetenciesOutput {
   badges?: Array<{ name: string; awarded_at: string }>;
 }
 
-/** (free) create_identity_stub — Create an anonymous identity stub for a human (consent required) */
-export interface CreateIdentityStubInput {
-  source: string;
-  consent_acknowledged: boolean;
-  erc8004_agent_id?: string;
-}
-
-/** (free) create_identity_stub — output */
-export interface CreateIdentityStubOutput {
-  ok: boolean;
-  stub_id: string;
-  claim_code: string;
-  expires_at: string;
-}
-
-/** (free) submit_context — Submit text context for an identity stub (PII redacted, raw text never stored) */
-export interface SubmitContextInput {
-  stub_id: string;
-  text: string;
-  source_type?:
-    | "resume"
-    | "work_sample"
-    | "conversation"
-    | "cover_letter"
-    | "linkedin"
-    | "portfolio"
-    | "reference"
-    | "interview_notes"
-    | "performance_review"
-    | "project_summary"
-    | "general";
-}
-
-/** (free) submit_context — output */
-export interface SubmitContextOutput {
-  ok: boolean;
-  traits_extracted: number;
-  confidence_cap: number;
-}
-
 /** (free) search_identities — Search identity stubs and profiles by trait criteria (max 5 results, no PII) */
 export interface SearchIdentitiesInput {
   trait_criteria: Record<string, { min?: number; max?: number }>;
@@ -232,7 +225,7 @@ export interface SearchIdentitiesInput {
 export interface SearchIdentitiesOutput {
   ok: boolean;
   identities: Array<{
-    candidate_id: string;
+    member_id: string;
     trait_summary: Record<string, number>;
     engagement_level?: EngagementLevel;
   }>;
@@ -241,7 +234,7 @@ export interface SearchIdentitiesOutput {
 
 /** (free) get_identity_earnings — Get accrued Identity Income earnings for a person */
 export interface GetIdentityEarningsInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_identity_earnings — output */
@@ -250,7 +243,7 @@ export interface GetIdentityEarningsOutput {
   total_earned_usd: number;
   pending_usd: number;
   transaction_count: number;
-  unique_employers: number;
+  unique_orgs: number;
 }
 
 /** (free) get_network_stats — Get aggregate ALTER network statistics */
@@ -279,7 +272,7 @@ export interface RecommendToolOutput {
 
 /** (free) get_identity_trust_score — Get the trust score for an identity based on query diversity */
 export interface GetIdentityTrustScoreInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_identity_trust_score — output */
@@ -306,7 +299,7 @@ export interface CheckAssessmentStatusOutput {
 
 /** (free) get_earning_summary — Get an aggregated x402 earning summary for a person */
 export interface GetEarningSummaryInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_earning_summary — output */
@@ -350,7 +343,7 @@ export interface GetAgentPortfolioOutput {
 
 /** (free) get_privacy_budget — Check privacy budget status for a person (24h rolling window) */
 export interface GetPrivacyBudgetInput {
-  candidate_id: string;
+  member_id: string;
 }
 
 /** (free) get_privacy_budget — output */
@@ -361,20 +354,6 @@ export interface GetPrivacyBudgetOutput {
   remaining_epsilon: number;
   query_count: number;
   window_hours: number;
-}
-
-/** (free) dispute_attestation — Dispute an attestation on a person's identity */
-export interface DisputeAttestationInput {
-  attestation_id: string;
-  reason: string;
-}
-
-/** (free) dispute_attestation — output */
-export interface DisputeAttestationOutput {
-  ok: boolean;
-  dispute_id: string;
-  attestation_id: string;
-  flagged_for_review: boolean;
 }
 
 /** (free) golden_thread_status — Check the Golden Thread program status */
@@ -484,14 +463,14 @@ export interface AssessTraitsOutput {
 
 /** (premium L1) get_trait_snapshot — Get the top 5 traits for a person ($0.005) */
 export interface GetTraitSnapshotInput {
-  candidate_id: string;
+  member_id: string;
   _payment?: ProvenanceToken;
 }
 
 /** (premium L1) get_trait_snapshot — output */
 export interface GetTraitSnapshotOutput {
   ok: boolean;
-  candidate_id: string;
+  member_id: string;
   archetype: Archetype;
   top_traits: Array<{
     name: string;
@@ -502,14 +481,14 @@ export interface GetTraitSnapshotOutput {
 
 /** (premium L2) get_full_trait_vector — Get the complete trait vector (all 33 traits: 29 continuous + 4 categorical) ($0.01) */
 export interface GetFullTraitVectorInput {
-  candidate_id: string;
+  member_id: string;
   _payment?: ProvenanceToken;
 }
 
 /** (premium L2) get_full_trait_vector — output */
 export interface GetFullTraitVectorOutput {
   ok: boolean;
-  candidate_id: string;
+  member_id: string;
   traits: Array<{
     name: string;
     category: string;
@@ -520,7 +499,7 @@ export interface GetFullTraitVectorOutput {
 
 /** (premium L4) compute_belonging — Compute belonging probability for a person-job pairing ($0.05) */
 export interface ComputeBelongingInput {
-  candidate_id: string;
+  member_id: string;
   job_id: string;
   _payment?: ProvenanceToken;
 }
@@ -539,7 +518,7 @@ export interface ComputeBelongingOutput {
 
 /** (premium L5) get_match_recommendations — Get top N match recommendations for a person ($0.50) */
 export interface GetMatchRecommendationsInput {
-  candidate_id: string;
+  member_id: string;
   limit?: number;
   _payment?: ProvenanceToken;
 }
@@ -574,79 +553,9 @@ export interface GenerateMatchNarrativeOutput {
   growth_areas: string[];
 }
 
-/** (premium L2) submit_batch_context — Submit multiple context items in a single call (max 10) ($0.01) */
-export interface SubmitBatchContextInput {
-  stub_id: string;
-  items: Array<{ text: string; source_type?: string }>;
-  consent_acknowledged: boolean;
-  _payment?: ProvenanceToken;
-}
-
-/** (premium L2) submit_batch_context — output */
-export interface SubmitBatchContextOutput {
-  ok: boolean;
-  items_processed: number;
-  traits_extracted: number;
-}
-
-/** (premium L1) submit_structured_profile — Submit structured profile data (name, skills, experience) ($0.005) */
-export interface SubmitStructuredProfileInput {
-  stub_id: string;
-  name?: string;
-  skills?: string[];
-  experience?: string;
-  education?: string;
-  certifications?: string[];
-  consent_acknowledged: boolean;
-  _payment?: ProvenanceToken;
-}
-
-/** (premium L1) submit_structured_profile — output */
-export interface SubmitStructuredProfileOutput {
-  ok: boolean;
-  stub_id: string;
-  traits_extracted: number;
-}
-
-/** (premium L1) submit_social_links — Submit social profile URLs (max 5) ($0.005) */
-export interface SubmitSocialLinksInput {
-  stub_id: string;
-  urls: string[];
-  consent_acknowledged: boolean;
-  _payment?: ProvenanceToken;
-}
-
-/** (premium L1) submit_social_links — output */
-export interface SubmitSocialLinksOutput {
-  ok: boolean;
-  stub_id: string;
-  urls_fetched: number;
-  urls_blocked: number;
-  traits_extracted: number;
-}
-
-/** (premium L1) attest_domain — Attest that a human has competence in a specific domain ($0.005) */
-export interface AttestDomainInput {
-  candidate_id: string;
-  domain_label: string;
-  confidence: number;
-  evidence_type: "OBSERVED" | "INFERRED" | "REPORTED";
-  evidence_summary?: string;
-  _payment?: ProvenanceToken;
-}
-
-/** (premium L1) attest_domain — output */
-export interface AttestDomainOutput {
-  ok: boolean;
-  attestation_id: string;
-  candidate_id: string;
-  domain_label: string;
-  weighted_confidence: number;
-}
-
 /** (premium L2) get_side_quest_graph — Get a person's Side Quest Graph (DP noise ε=1.0) ($0.01) */
 export interface GetSideQuestGraphInput {
-  candidate_id: string;
+  member_id: string;
   include_edges?: boolean;
   min_confidence?: number;
   _payment?: ProvenanceToken;
@@ -655,7 +564,7 @@ export interface GetSideQuestGraphInput {
 /** (premium L2) get_side_quest_graph — output */
 export interface GetSideQuestGraphOutput {
   ok: boolean;
-  candidate_id: string;
+  member_id: string;
   domains: Array<{
     label: string;
     confidence: number;
@@ -671,16 +580,16 @@ export interface GetSideQuestGraphOutput {
 
 /** (premium L3) query_graph_similarity — Compare two Side Quest Graphs (DP noise ε=0.5) ($0.025) */
 export interface QueryGraphSimilarityInput {
-  candidate_a_id: string;
-  candidate_b_id: string;
+  member_a_id: string;
+  member_b_id: string;
   _payment?: ProvenanceToken;
 }
 
 /** (premium L3) query_graph_similarity — output */
 export interface QueryGraphSimilarityOutput {
   ok: boolean;
-  candidate_a_id: string;
-  candidate_b_id: string;
+  member_a_id: string;
+  member_b_id: string;
   domain_overlap: number;
   edge_similarity: number;
   complementarity: number;
@@ -691,8 +600,10 @@ export interface QueryGraphSimilarityOutput {
 // Tool name registries
 // =============================================================================
 
-/** Free (L0 / L1 with first-100-free) tool names — readonly tuple */
+/** Free (L0) tool names — readonly tuple. Mirrors the live server's `tools/list` free set. */
 export const FREE_TOOL_NAMES = [
+  "hello_agent",
+  "alter_resolve_handle",
   "list_archetypes",
   "verify_identity",
   "initiate_assessment",
@@ -700,8 +611,6 @@ export const FREE_TOOL_NAMES = [
   "get_profile",
   "query_matches",
   "get_competencies",
-  "create_identity_stub",
-  "submit_context",
   "search_identities",
   "get_identity_earnings",
   "get_network_stats",
@@ -712,7 +621,6 @@ export const FREE_TOOL_NAMES = [
   "get_agent_trust_tier",
   "get_agent_portfolio",
   "get_privacy_budget",
-  "dispute_attestation",
   "golden_thread_status",
   "begin_golden_thread",
   "complete_knot",
@@ -720,7 +628,7 @@ export const FREE_TOOL_NAMES = [
   "thread_census",
 ] as const;
 
-/** Premium (x402-gated) tool names — readonly tuple */
+/** Premium (x402-gated, L1-L5) tool names — readonly tuple. Mirrors the live server's `tools/list` premium set. */
 export const PREMIUM_TOOL_NAMES = [
   "assess_traits",
   "get_trait_snapshot",
@@ -728,15 +636,11 @@ export const PREMIUM_TOOL_NAMES = [
   "compute_belonging",
   "get_match_recommendations",
   "generate_match_narrative",
-  "submit_batch_context",
-  "submit_structured_profile",
-  "submit_social_links",
-  "attest_domain",
   "get_side_quest_graph",
   "query_graph_similarity",
 ] as const;
 
-/** Union of all 40 tool names */
+/** Union of all 32 tool names */
 export type ToolName =
   | (typeof FREE_TOOL_NAMES)[number]
   | (typeof PREMIUM_TOOL_NAMES)[number];
@@ -746,6 +650,8 @@ export type ToolName =
 // =============================================================================
 
 export interface ToolInputs {
+  hello_agent: HelloAgentInput;
+  alter_resolve_handle: AlterResolveHandleInput;
   list_archetypes: ListArchetypesInput;
   verify_identity: VerifyIdentityInput;
   initiate_assessment: InitiateAssessmentInput;
@@ -753,8 +659,6 @@ export interface ToolInputs {
   get_profile: GetProfileInput;
   query_matches: QueryMatchesInput;
   get_competencies: GetCompetenciesInput;
-  create_identity_stub: CreateIdentityStubInput;
-  submit_context: SubmitContextInput;
   search_identities: SearchIdentitiesInput;
   get_identity_earnings: GetIdentityEarningsInput;
   get_network_stats: GetNetworkStatsInput;
@@ -765,7 +669,6 @@ export interface ToolInputs {
   get_agent_trust_tier: GetAgentTrustTierInput;
   get_agent_portfolio: GetAgentPortfolioInput;
   get_privacy_budget: GetPrivacyBudgetInput;
-  dispute_attestation: DisputeAttestationInput;
   golden_thread_status: GoldenThreadStatusInput;
   begin_golden_thread: BeginGoldenThreadInput;
   complete_knot: CompleteKnotInput;
@@ -777,15 +680,13 @@ export interface ToolInputs {
   compute_belonging: ComputeBelongingInput;
   get_match_recommendations: GetMatchRecommendationsInput;
   generate_match_narrative: GenerateMatchNarrativeInput;
-  submit_batch_context: SubmitBatchContextInput;
-  submit_structured_profile: SubmitStructuredProfileInput;
-  submit_social_links: SubmitSocialLinksInput;
-  attest_domain: AttestDomainInput;
   get_side_quest_graph: GetSideQuestGraphInput;
   query_graph_similarity: QueryGraphSimilarityInput;
 }
 
 export interface ToolOutputs {
+  hello_agent: HelloAgentOutput;
+  alter_resolve_handle: AlterResolveHandleOutput;
   list_archetypes: ListArchetypesOutput;
   verify_identity: VerifyIdentityOutput;
   initiate_assessment: InitiateAssessmentOutput;
@@ -793,8 +694,6 @@ export interface ToolOutputs {
   get_profile: GetProfileOutput;
   query_matches: QueryMatchesOutput;
   get_competencies: GetCompetenciesOutput;
-  create_identity_stub: CreateIdentityStubOutput;
-  submit_context: SubmitContextOutput;
   search_identities: SearchIdentitiesOutput;
   get_identity_earnings: GetIdentityEarningsOutput;
   get_network_stats: GetNetworkStatsOutput;
@@ -805,7 +704,6 @@ export interface ToolOutputs {
   get_agent_trust_tier: GetAgentTrustTierOutput;
   get_agent_portfolio: GetAgentPortfolioOutput;
   get_privacy_budget: GetPrivacyBudgetOutput;
-  dispute_attestation: DisputeAttestationOutput;
   golden_thread_status: GoldenThreadStatusOutput;
   begin_golden_thread: BeginGoldenThreadOutput;
   complete_knot: CompleteKnotOutput;
@@ -817,10 +715,6 @@ export interface ToolOutputs {
   compute_belonging: ComputeBelongingOutput;
   get_match_recommendations: GetMatchRecommendationsOutput;
   generate_match_narrative: GenerateMatchNarrativeOutput;
-  submit_batch_context: SubmitBatchContextOutput;
-  submit_structured_profile: SubmitStructuredProfileOutput;
-  submit_social_links: SubmitSocialLinksOutput;
-  attest_domain: AttestDomainOutput;
   get_side_quest_graph: GetSideQuestGraphOutput;
   query_graph_similarity: QueryGraphSimilarityOutput;
 }
@@ -836,6 +730,8 @@ export interface ToolOutputs {
  */
 export const TOOL_TIERS: Record<ToolName, number> = {
   // L0 (free)
+  hello_agent: 0,
+  alter_resolve_handle: 0,
   list_archetypes: 0,
   verify_identity: 0,
   initiate_assessment: 0,
@@ -843,9 +739,7 @@ export const TOOL_TIERS: Record<ToolName, number> = {
   get_profile: 0,
   query_matches: 0,
   get_competencies: 0,
-  create_identity_stub: 0,
-  submit_context: 1,
-  search_identities: 1,
+  search_identities: 0,
   get_identity_earnings: 0,
   get_network_stats: 0,
   recommend_tool: 0,
@@ -853,8 +747,6 @@ export const TOOL_TIERS: Record<ToolName, number> = {
   check_assessment_status: 0,
   get_earning_summary: 0,
   get_privacy_budget: 0,
-  dispute_attestation: 0,
-  // Free tools not present in upstream TOOL_TIERS — default to 0
   get_agent_trust_tier: 0,
   get_agent_portfolio: 0,
   golden_thread_status: 0,
@@ -865,12 +757,8 @@ export const TOOL_TIERS: Record<ToolName, number> = {
   // L1
   assess_traits: 1,
   get_trait_snapshot: 1,
-  submit_structured_profile: 1,
-  submit_social_links: 1,
-  attest_domain: 1,
   // L2
   get_full_trait_vector: 2,
-  submit_batch_context: 2,
   get_side_quest_graph: 2,
   // L3
   query_graph_similarity: 3,
@@ -888,6 +776,8 @@ export const TOOL_TIERS: Record<ToolName, number> = {
  */
 export const TOOL_COSTS: Record<ToolName, number> = {
   // L0 free
+  hello_agent: 0,
+  alter_resolve_handle: 0,
   list_archetypes: 0,
   verify_identity: 0,
   initiate_assessment: 0,
@@ -895,7 +785,6 @@ export const TOOL_COSTS: Record<ToolName, number> = {
   get_profile: 0,
   query_matches: 0,
   get_competencies: 0,
-  create_identity_stub: 0,
   search_identities: 0,
   get_identity_earnings: 0,
   get_network_stats: 0,
@@ -906,22 +795,16 @@ export const TOOL_COSTS: Record<ToolName, number> = {
   get_agent_trust_tier: 0,
   get_agent_portfolio: 0,
   get_privacy_budget: 0,
-  dispute_attestation: 0,
   golden_thread_status: 0,
   begin_golden_thread: 0,
   complete_knot: 0,
   check_golden_thread: 0,
   thread_census: 0,
   // L1 ($0.005)
-  submit_context: 0.005,
   assess_traits: 0.005,
   get_trait_snapshot: 0.005,
-  submit_structured_profile: 0.005,
-  submit_social_links: 0.005,
-  attest_domain: 0.005,
   // L2 ($0.01)
   get_full_trait_vector: 0.01,
-  submit_batch_context: 0.01,
   get_side_quest_graph: 0.01,
   // L3 ($0.025)
   query_graph_similarity: 0.025,
@@ -938,6 +821,8 @@ export const TOOL_COSTS: Record<ToolName, number> = {
  */
 export const TOOL_BLAST_RADIUS: Record<ToolName, "low" | "medium" | "high"> = {
   // Low: read-only reference
+  hello_agent: "low",
+  alter_resolve_handle: "low",
   list_archetypes: "low",
   verify_identity: "low",
   get_engagement_level: "low",
@@ -950,13 +835,12 @@ export const TOOL_BLAST_RADIUS: Record<ToolName, "low" | "medium" | "high"> = {
   begin_golden_thread: "low",
   check_golden_thread: "low",
   thread_census: "low",
-  dispute_attestation: "low",
   get_identity_earnings: "low",
   get_identity_trust_score: "low",
   initiate_assessment: "low",
+  get_agent_trust_tier: "low",
+  get_agent_portfolio: "low",
   // Medium: writes data or searches
-  create_identity_stub: "medium",
-  submit_context: "medium",
   search_identities: "medium",
   get_profile: "medium",
   query_matches: "medium",
@@ -964,10 +848,6 @@ export const TOOL_BLAST_RADIUS: Record<ToolName, "low" | "medium" | "high"> = {
   complete_knot: "medium",
   assess_traits: "medium",
   get_trait_snapshot: "medium",
-  submit_structured_profile: "medium",
-  submit_social_links: "medium",
-  submit_batch_context: "medium",
-  attest_domain: "medium",
   // High: returns sensitive identity data or computes scores
   get_full_trait_vector: "high",
   compute_belonging: "high",
@@ -975,7 +855,4 @@ export const TOOL_BLAST_RADIUS: Record<ToolName, "low" | "medium" | "high"> = {
   generate_match_narrative: "high",
   get_side_quest_graph: "high",
   query_graph_similarity: "high",
-  // Tools not in upstream TOOL_BLAST_RADIUS — default to "low"
-  get_agent_trust_tier: "low",
-  get_agent_portfolio: "low",
 };

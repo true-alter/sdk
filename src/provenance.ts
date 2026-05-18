@@ -61,6 +61,8 @@ export interface JwksDocument {
 
 const _jwksCache = new Map<string, { fetched: number; jwks: JwksDocument }>();
 const JWKS_TTL_MS = 5 * 60 * 1000;
+const JWKS_MAX_BYTES = 64 * 1024;
+const JWKS_CACHE_MAX_ENTRIES = 32;
 
 /**
  * Default hostnames that `envelope.verify_at` is trusted to resolve to.
@@ -79,6 +81,14 @@ export const DEFAULT_VERIFY_AT_ALLOWLIST: readonly string[] = Object.freeze([
   'mcp.truealter.com',
 ]);
 
+/**
+ * The `iss` claim that ALTER's platform signs into every provenance token.
+ * Verifiers check `payload.iss` against this constant (or the caller-supplied
+ * `expectedIss` override) to prevent cross-identity substitution — IaI clause
+ * #2 (provenance).
+ */
+export const ALTER_PLATFORM_ISS = 'did:alter:platform';
+
 export interface VerifyProvenanceOptions {
   /**
    * Override the JWKS URL entirely. Takes precedence over both the
@@ -96,6 +106,14 @@ export interface VerifyProvenanceOptions {
   verifyAtAllowlist?: readonly string[];
   fetch?: typeof fetch;
   now?: number;
+  /**
+   * Expected `iss` claim. Defaults to {@link ALTER_PLATFORM_ISS}
+   * (`"did:alter:platform"`). Pass an explicit value only when verifying
+   * tokens minted by a non-platform issuer (e.g. a test fixture or a
+   * whitelabelled deployment). An empty string disables the check — not
+   * recommended for production use.
+   */
+  expectedIss?: string;
 }
 
 /**
@@ -213,6 +231,20 @@ export async function verifyProvenance(
     return { valid: false, reason: 'issued in the future', payload, kid: header.kid };
   }
 
+  // S8-H-1: validate `iss` claim to prevent cross-identity substitution (IaI
+  // clause #2 — provenance). The expected issuer defaults to the ALTER platform
+  // DID; callers may override via `opts.expectedIss` for non-platform issuers.
+  // An explicit empty string opts out of the check (test fixtures only).
+  const expectedIss = opts.expectedIss !== undefined ? opts.expectedIss : ALTER_PLATFORM_ISS;
+  if (expectedIss !== '' && payload.iss !== expectedIss) {
+    return {
+      valid: false,
+      reason: `iss mismatch: expected "${expectedIss}", got "${payload.iss}"`,
+      payload,
+      kid: header.kid,
+    };
+  }
+
   return { valid: true, payload, kid: header.kid };
 }
 
@@ -268,7 +300,11 @@ export async function fetchPublicKeys(jwksUrl: string, fetchImpl: typeof fetch =
 // ── Internals ────────────────────────────────────────────────────────────
 
 async function fetchJwks(url: string, fetchImpl: typeof fetch): Promise<JwksDocument> {
-  const cached = _jwksCache.get(url);
+  // Cache keyed on origin+pathname so userinfo / query / fragment variants
+  // collapse to one entry and cannot poison the cache independently.
+  const cacheKey = jwksCacheKey(url);
+
+  const cached = _jwksCache.get(cacheKey);
   if (cached && Date.now() - cached.fetched < JWKS_TTL_MS) return cached.jwks;
 
   let resp: Response;
@@ -293,12 +329,52 @@ async function fetchJwks(url: string, fetchImpl: typeof fetch): Promise<JwksDocu
   }
   if (!resp.ok) throw new AlterNetworkError(`${url} → HTTP ${resp.status}`);
 
-  const doc = (await resp.json()) as JwksDocument;
+  // Bound the JWKS body so a hostile origin can't OOM the agent process with
+  // a multi-GB response. Prefer the advertised Content-Length; fall back to
+  // capping the text body.
+  const contentLength = resp.headers.get('content-length');
+  if (contentLength !== null) {
+    const n = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(n) && n > JWKS_MAX_BYTES) {
+      throw new AlterProvenanceError(
+        `${url} → JWKS too large: ${n} > ${JWKS_MAX_BYTES} bytes`,
+      );
+    }
+  }
+  const body = await resp.text();
+  if (body.length > JWKS_MAX_BYTES) {
+    throw new AlterProvenanceError(
+      `${url} → JWKS too large: ${body.length} > ${JWKS_MAX_BYTES} bytes`,
+    );
+  }
+  let doc: JwksDocument;
+  try {
+    doc = JSON.parse(body) as JwksDocument;
+  } catch (err) {
+    throw new AlterProvenanceError(`invalid JWKS at ${url}: ${(err as Error).message}`);
+  }
   if (!doc || !Array.isArray(doc.keys)) {
     throw new AlterProvenanceError(`invalid JWKS at ${url}`);
   }
-  _jwksCache.set(url, { fetched: Date.now(), jwks: doc });
+
+  // FIFO eviction — Map preserves insertion order, so the first key is the
+  // oldest. Keeps the cache bounded under legitimate rotation and hostile
+  // cache-fill attempts alike.
+  if (_jwksCache.size >= JWKS_CACHE_MAX_ENTRIES && !_jwksCache.has(cacheKey)) {
+    const oldest = _jwksCache.keys().next().value;
+    if (oldest !== undefined) _jwksCache.delete(oldest);
+  }
+  _jwksCache.set(cacheKey, { fetched: Date.now(), jwks: doc });
   return doc;
+}
+
+function jwksCacheKey(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
 }
 
 /**
@@ -346,6 +422,13 @@ export function resolveVerifyAt(
 
   if (parsed.protocol !== 'https:') {
     throw new Error(`verify_at must be https: ${verifyAt}`);
+  }
+
+  // Reject `user:pass@host` forms — the Basic-auth credential would be
+  // sent verbatim to the JWKS origin, leaking whatever the caller embedded
+  // into a URL that only looked trusted because of the hostname.
+  if (parsed.username || parsed.password) {
+    throw new Error(`verify_at must not contain userinfo: ${verifyAt}`);
   }
 
   const host = parsed.hostname.toLowerCase();

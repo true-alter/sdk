@@ -30,18 +30,18 @@
     "ttl_seconds": 300
   },
   "consent_gates": {
-    "candidate_data": false,
+    "member_data": false,
     "passive_signals": false,
     "agent_to_agent_metadata": true,
     "note": "D-CO23 agent-to-agent metadata exclusion is PENDING ratification (flagged in standup-as-category-deep-dive Part IV). Until ratified, this flag is illustrative; production accords must re-validate the consent gates against the live Decision Register."
   },
   "split": {
     "policy": "D-CD1",
-    "candidate_bps": 7500,
+    "member_bps": 7500,
     "facilitator_bps": 500,
     "alter_bps": 1500,
     "cooperative_bps": 500,
-    "note": "75/5/15/5 = 10000 bps. Agent-to-agent flows with no candidate re-route the 7500 bps candidate share per the pending D-CO23 DR entry. Until ratified, split math is illustrative-only."
+    "note": "75/5/15/5 = 10000 bps. Agent-to-agent flows with no member re-route the 7500 bps member share per the pending D-CO23 DR entry. Until ratified, split math is illustrative-only."
   },
   "revocation": {
     "mode": "immediate",
