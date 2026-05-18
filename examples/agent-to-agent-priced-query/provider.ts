@@ -157,7 +157,7 @@ export class Provider {
     // The tool under test is `compute_belonging` — in production it
     // returns a Belonging Probability vector keyed by role archetype.
     // For the reference flow we return a hardcoded payload. Note that
-    // agent-to-agent L2 queries don't touch candidate data; this
+    // agent-to-agent L2 queries don't touch member data; this
     // response would carry only role-side scoring weights.
     const stubResponse = {
       tool: 'compute_belonging',
@@ -173,12 +173,12 @@ export class Provider {
     };
 
     // D-CD1 split with D-RS8 org-attested adder illustrated. The
-    // `hasCandidate: false` branch is the pending-DR case — see
+    // `hasMember: false` branch is the pending-DR case — see
     // README banner and shared.ts:computeSplit for the note string.
     const split = computeSplit({
       grossAmount: this.env.PRICED_QUERY_AMOUNT,
       asset: this.env.X402_ASSET,
-      hasCandidate: false,
+      hasMember: false,
       orgAttested: true,
     });
 
@@ -205,11 +205,11 @@ export class Provider {
         amount: this.env.PRICED_QUERY_AMOUNT,
       },
       split: {
-        candidate_bps: split.candidate_bps,
+        member_bps: split.member_bps,
         facilitator_bps: split.facilitator_bps,
         alter_bps: split.alter_bps,
         cooperative_bps: split.cooperative_bps,
-        org_alter_bps: split.org_alter_bps,
+        alter_bps: split.alter_bps,
         notes: split.notes,
       },
       issued_at: issuedAt,

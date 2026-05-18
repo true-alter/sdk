@@ -49,9 +49,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export function loadEnv(): ExampleEnv {
   // Prefer .env if present, otherwise fall back to env.example (checked
   // in as a template — safe because it contains no secrets, only paths).
-  const candidates = ['.env', 'env.example'];
+  const members = ['.env', 'env.example'];
   const raw: Record<string, string> = { ...process.env } as Record<string, string>;
-  for (const name of candidates) {
+  for (const name of members) {
     const p = join(__dirname, name);
     if (!existsSync(p)) continue;
     for (const line of readFileSync(p, 'utf8').split('\n')) {
@@ -225,13 +225,13 @@ export interface PricedQueryReceipt {
   response: unknown;
   settlement: X402Settlement;
   split: {
-    // Bps of the gross amount. Agent-to-agent flows with no candidate
-    // mean `candidate_bps` is redirected per pending D-CO23 ratification.
-    candidate_bps: number;
+    // Bps of the gross amount. Agent-to-agent flows with no member
+    // mean `member_bps` is redirected per pending D-CO23 ratification.
+    member_bps: number;
     facilitator_bps: number;
     alter_bps: number;
     cooperative_bps: number;
-    org_alter_bps: number; // D-RS8 10% of ALTER share when org-attested
+    alter_bps: number; // D-RS8 10% of ALTER share when org-attested
     notes: string[];
   };
   issued_at: string;
@@ -295,36 +295,36 @@ export async function verifyReceipt(
 export interface SplitInput {
   grossAmount: string; // display units, e.g. "0.01"
   asset: string;
-  hasCandidate: boolean;
+  hasMember: boolean;
   orgAttested: boolean;
 }
 
 export interface SplitResult {
-  candidate_bps: number;
+  member_bps: number;
   facilitator_bps: number;
   alter_bps: number;
   cooperative_bps: number;
-  org_alter_bps: number;
+  alter_bps: number;
   notes: string[];
 }
 
 /**
  * Compute the D-CD1 revenue split.
  *
- * Baseline (D-CD1):       75 / 5 / 15 / 5   candidate / facilitator / ALTER / cooperative
+ * Baseline (D-CD1):       75 / 5 / 15 / 5   member / facilitator / ALTER / cooperative
  * Org-attested adder (D-RS8): +10% of ALTER's 15% goes to the Org Alter
  *   → ALTER keeps 13.5% of gross, Org Alter takes 1.5% of gross.
  *
- * Agent-to-agent (no candidate) behaviour is PENDING a Decision Register
+ * Agent-to-agent (no member) behaviour is PENDING a Decision Register
  * entry (see standup-as-category-deep-dive Part IV). Until then the
- * 7500 bps nominally earmarked for the candidate is flagged in `notes[]`
+ * 7500 bps nominally earmarked for the member is flagged in `notes[]`
  * as illustrative-only; this example does NOT take a position on where
- * those bps land (cooperative, facilitator, or a new "no-candidate
+ * those bps land (cooperative, facilitator, or a new "no-member
  * rebate" bucket).
  */
 export function computeSplit(input: SplitInput): SplitResult {
   const notes: string[] = [];
-  let candidate = 7500;
+  let member = 7500;
   let facilitator = 500;
   let alter = 1500;
   const cooperative = 500;
@@ -337,27 +337,27 @@ export function computeSplit(input: SplitInput): SplitResult {
     notes.push('D-RS8 applied: 10% of ALTER share redirected to Org Alter (1500 → 1350 + 150 bps).');
   }
 
-  if (!input.hasCandidate) {
+  if (!input.hasMember) {
     notes.push(
-      'No candidate in this flow (agent-to-agent L2 priced query). The 7500 bps candidate share is ' +
+      'No member in this flow (agent-to-agent L2 priced query). The 7500 bps member share is ' +
         'illustrative-only pending D-CO23 agent-to-agent metadata exclusion DR entry — see README banner. ' +
         'This example leaves the 7500 bps UNALLOCATED; production flows MUST resolve before settlement.',
     );
-    candidate = 0;
+    member = 0;
   }
 
-  const total = candidate + facilitator + alter + cooperative + orgAlter;
+  const total = member + facilitator + alter + cooperative + orgAlter;
   notes.push(
     `Bps accounted for: ${total}/10000` +
-      (input.hasCandidate ? ' (sums to 10000 = full pool)' : ` (${10000 - total} bps unallocated — see above)`),
+      (input.hasMember ? ' (sums to 10000 = full pool)' : ` (${10000 - total} bps unallocated — see above)`),
   );
 
   return {
-    candidate_bps: candidate,
+    member_bps: member,
     facilitator_bps: facilitator,
     alter_bps: alter,
     cooperative_bps: cooperative,
-    org_alter_bps: orgAlter,
+    alter_bps: orgAlter,
     notes,
   };
 }

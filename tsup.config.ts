@@ -9,11 +9,19 @@ export default defineConfig([
     format: ['esm', 'cjs'],
     dts: true,
     splitting: false,
-    sourcemap: true,
+    // Library sourcemaps ship the full TypeScript source to any npm consumer
+    // via the package allowlist — keep library drop off-map.
+    sourcemap: false,
     clean: true,
     target: 'node18',
     platform: 'neutral',
-    shims: false,
+    // `signing.ts` lazy-requires `node:crypto` only for the PEM-input
+    // branch of `loadPrivateKey`; mark it external so the neutral
+    // bundle leaves the call intact for Node consumers, and enable
+    // shims so the ESM build ships a `require` shim that can resolve
+    // it at runtime. Non-Node consumers simply never hit the branch.
+    external: ['node:crypto'],
+    shims: true,
     treeshake: true,
     outDir: 'dist',
   },
@@ -25,7 +33,9 @@ export default defineConfig([
     format: ['esm'],
     dts: false,
     splitting: false,
-    sourcemap: true,
+    // CLI sourcemaps also ship via package.json "dist/" allowlist — disable
+    // to prevent full TypeScript source leaking to npm consumers (sdk/H-1).
+    sourcemap: false,
     clean: false,
     target: 'node18',
     platform: 'node',

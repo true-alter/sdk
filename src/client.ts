@@ -3,8 +3,8 @@
  *
  * This is the entry point most consumers will use. It bundles
  * {@link MCPClient}, {@link X402Client}, discovery, and provenance
- * verification into a single ergonomic surface that mirrors the 40
- * tools exposed at https://mcp.truealter.com.
+ * verification into a single ergonomic surface that mirrors the 32
+ * tools exposed at https://mcp.truealter.com/api/v1/mcp.
  *
  * Free tier methods require no authentication. Premium methods accept
  * an `X402Client` (or fall back to throwing {@link AlterPaymentRequired}
@@ -24,15 +24,13 @@ import {
 } from './provenance.js';
 import { X402Client } from './x402.js';
 import type {
+  AlterResolveHandleInput,
   AssessTraitsInput,
-  AttestDomainInput,
   BeginGoldenThreadInput,
   CheckAssessmentStatusInput,
   CheckGoldenThreadInput,
   CompleteKnotInput,
   ComputeBelongingInput,
-  CreateIdentityStubInput,
-  DisputeAttestationInput,
   GenerateMatchNarrativeInput,
   GetCompetenciesInput,
   GetEarningSummaryInput,
@@ -49,10 +47,6 @@ import type {
   QueryGraphSimilarityInput,
   QueryMatchesInput,
   SearchIdentitiesInput,
-  SubmitBatchContextInput,
-  SubmitContextInput,
-  SubmitSocialLinksInput,
-  SubmitStructuredProfileInput,
   ThreadCensusInput,
   VerifyIdentityInput,
 } from './types.js';
@@ -139,14 +133,26 @@ export class AlterClient {
 
   // ── Free tier ────────────────────────────────────────────────────────
 
+  /** First handshake — confirms the connection, returns trust tier and tool counts. */
+  async helloAgent(): Promise<MCPCallToolResult> {
+    return this.mcp.callTool('hello_agent', {});
+  }
+
+  /** Resolve a ~handle (e.g. ~drew) to its canonical form and kind. No auth required. */
+  async resolveHandle(args: AlterResolveHandleInput | string): Promise<MCPCallToolResult> {
+    const payload: AlterResolveHandleInput =
+      typeof args === 'string' ? { query: args } : args;
+    return this.mcp.callTool('alter_resolve_handle', payload as unknown as Record<string, unknown>);
+  }
+
   /** Verify a person is registered with ALTER (handle or id). */
   async verify(handleOrId: string, claims?: VerifyIdentityInput['claims']): Promise<MCPCallToolResult> {
     const args: VerifyIdentityInput = handleOrId.includes('@')
-      ? { candidate_id: '', email: handleOrId }
+      ? { member_id: '', email: handleOrId }
       : handleOrId.startsWith('~')
-        ? // ~handle — server resolves these via the candidate_id field
-          { candidate_id: handleOrId }
-        : { candidate_id: handleOrId };
+        ? // ~handle — server resolves these via the member_id field
+          { member_id: handleOrId }
+        : { member_id: handleOrId };
     if (claims) args.claims = claims;
     return this.mcp.callTool('verify_identity', args as unknown as Record<string, unknown>);
   }
@@ -186,14 +192,6 @@ export class AlterClient {
     return this.mcp.callTool('get_competencies', args as unknown as Record<string, unknown>);
   }
 
-  async createIdentityStub(args: CreateIdentityStubInput): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('create_identity_stub', args as unknown as Record<string, unknown>);
-  }
-
-  async submitContext(args: SubmitContextInput): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('submit_context', args as unknown as Record<string, unknown>);
-  }
-
   async searchIdentities(args: SearchIdentitiesInput): Promise<MCPCallToolResult> {
     return this.mcp.callTool('search_identities', args as unknown as Record<string, unknown>);
   }
@@ -224,10 +222,6 @@ export class AlterClient {
 
   async getPrivacyBudget(args: GetPrivacyBudgetInput): Promise<MCPCallToolResult> {
     return this.mcp.callTool('get_privacy_budget', args as unknown as Record<string, unknown>);
-  }
-
-  async disputeAttestation(args: DisputeAttestationInput): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('dispute_attestation', args as unknown as Record<string, unknown>);
   }
 
   // ── Golden Thread ────────────────────────────────────────────────────
@@ -282,25 +276,6 @@ export class AlterClient {
     opts?: MCPCallOptions,
   ): Promise<MCPCallToolResult> {
     return this.mcp.callTool('generate_match_narrative', args as unknown as Record<string, unknown>, opts);
-  }
-
-  async submitBatchContext(args: SubmitBatchContextInput, opts?: MCPCallOptions): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('submit_batch_context', args as unknown as Record<string, unknown>, opts);
-  }
-
-  async submitStructuredProfile(
-    args: SubmitStructuredProfileInput,
-    opts?: MCPCallOptions,
-  ): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('submit_structured_profile', args as unknown as Record<string, unknown>, opts);
-  }
-
-  async submitSocialLinks(args: SubmitSocialLinksInput, opts?: MCPCallOptions): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('submit_social_links', args as unknown as Record<string, unknown>, opts);
-  }
-
-  async attestDomain(args: AttestDomainInput, opts?: MCPCallOptions): Promise<MCPCallToolResult> {
-    return this.mcp.callTool('attest_domain', args as unknown as Record<string, unknown>, opts);
   }
 
   async getSideQuestGraph(args: GetSideQuestGraphInput, opts?: MCPCallOptions): Promise<MCPCallToolResult> {

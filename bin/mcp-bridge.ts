@@ -31,10 +31,49 @@ const ENDPOINT =
   env.ALTER_MCP_ENDPOINT ?? 'https://mcp.truealter.com/api/v1/mcp';
 const API_KEY = env.ALTER_API_KEY ?? undefined;
 
+// Extra HTTP headers, useful when the endpoint sits behind a Cloudflare
+// Access edge gate. Two paths:
+//
+//   1. ALTER_BRIDGE_HEADERS — JSON object, full escape hatch.
+//   2. CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET — convenience for
+//      the common CF Access service-token pattern.
+//
+// (1) wins over (2) on collision.
+function buildExtraHeaders(): Record<string, string> | undefined {
+  const headers: Record<string, string> = {};
+  if (env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET) {
+    headers['CF-Access-Client-Id'] = env.CF_ACCESS_CLIENT_ID;
+    headers['CF-Access-Client-Secret'] = env.CF_ACCESS_CLIENT_SECRET;
+  }
+  if (env.ALTER_BRIDGE_HEADERS) {
+    try {
+      const parsed = JSON.parse(env.ALTER_BRIDGE_HEADERS) as Record<string, string>;
+      Object.assign(headers, parsed);
+    } catch (err) {
+      stderr.write(
+        `[alter-bridge] warning: ALTER_BRIDGE_HEADERS is not valid JSON; ignored (${(err as Error).message})\n`,
+      );
+    }
+  }
+  return Object.keys(headers).length ? headers : undefined;
+}
+
+const EXTRA_HEADERS = buildExtraHeaders();
+
+// LB-4 (2026-04-23): dev-only bridge posture at launch.
+// Emit a one-shot advisory to stderr so MCP hosts, demo users, and CI logs
+// can see the scope boundary. stdout is the JSON-RPC wire on stdio bridges
+// and must NOT be written to here — `console.warn` in Node writes to stderr
+// by design, so the JSON-RPC channel stays clean.
+console.warn(
+  'This bridge is a dev/demo surface. Authenticated MCP tools require Q5c signing; for production, import `@truealter/sdk` directly. Bridge signing lands in Wave-2.',
+);
+
 const client = new MCPClient({
   endpoint: ENDPOINT,
   apiKey: API_KEY,
   clientInfo: { name: '@truealter/sdk-mcp-bridge', version: '0.2.0' },
+  extraHeaders: EXTRA_HEADERS,
 });
 
 interface JsonRpcRequest {

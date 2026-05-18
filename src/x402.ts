@@ -76,11 +76,17 @@ export class X402Client {
     if (!this.assets.has(envelope.asset)) {
       throw new AlterError('PAYMENT_REQUIRED', `asset ${envelope.asset} not permitted by client policy`);
     }
-    if (this.maxPerQuery !== undefined && Number(envelope.amount) > this.maxPerQuery) {
-      throw new AlterError(
-        'PAYMENT_REQUIRED',
-        `quote ${envelope.amount} ${envelope.asset} exceeds maxPerQuery ${this.maxPerQuery}`,
-      );
+    if (this.maxPerQuery !== undefined) {
+      // sdk/M-4 pentest 2026-04-17: `Number("NaN") > X` is always `false`,
+      // so a server-controlled non-numeric `amount` silently bypasses the
+      // cap. Require a finite, non-negative number before comparison.
+      const amt = Number(envelope.amount);
+      if (!Number.isFinite(amt) || amt < 0 || amt > this.maxPerQuery) {
+        throw new AlterError(
+          'PAYMENT_REQUIRED',
+          `quote ${envelope.amount} ${envelope.asset} exceeds maxPerQuery ${this.maxPerQuery}`,
+        );
+      }
     }
     if (!this.signer) {
       // No signer — re-raise so the caller can handle settlement themselves.

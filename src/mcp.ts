@@ -44,6 +44,35 @@ export interface MCPClientOptions {
   clientInfo?: MCPClientInfo;
   /** Optional x402 client for automatic premium tool payment. */
   x402?: X402Client;
+  /**
+   * Q5c per-invocation signing. When present, every `tools/call` is
+   * ES256-signed and submitted with the `Mcp-Invocation-Signature`
+   * header. The public half of `privateKey` MUST have been
+   * registered via `POST /api/v1/agents/keys` against the same API
+   * key configured here. Required whenever `apiKey` is set and the
+   * server is in production / staging (hard-required from
+   * 2026-04-20).
+   */
+  signing?: MCPSigningOptions;
+  /**
+   * Extra HTTP headers added to every request. Useful when the endpoint
+   * sits behind an edge gate that requires its own credentials —
+   * e.g. Cloudflare Access service tokens (`CF-Access-Client-Id` +
+   * `CF-Access-Client-Secret`). Protocol-level headers (`Content-Type`,
+   * `Accept`) and ALTER-internal headers (`X-ALTER-API-Key`,
+   * `Mcp-Session-Id`, `Mcp-Invocation-Signature`) always win over
+   * collisions here.
+   */
+  extraHeaders?: Record<string, string>;
+}
+
+export interface MCPSigningOptions {
+  /** The signing-key id pre-registered with the server. */
+  kid: string;
+  /** ES256 P-256 private key: 32-byte scalar or PEM. */
+  privateKey: Uint8Array | string;
+  /** The caller's bound ~handle. */
+  handle: string;
 }
 
 export interface MCPCallOptions {
@@ -97,6 +126,8 @@ export class MCPClient {
   private readonly maxRetries: number;
   private readonly clientInfo: MCPClientInfo;
   private readonly x402?: X402Client;
+  private readonly signing?: MCPSigningOptions;
+  private readonly extraHeaders?: Record<string, string>;
   private requestCounter = 0;
   private initialised = false;
 
@@ -108,6 +139,8 @@ export class MCPClient {
     this.maxRetries = opts.maxRetries ?? 2;
     this.clientInfo = opts.clientInfo ?? { name: '@truealter/sdk', version: '0.2.0' };
     this.x402 = opts.x402;
+    this.signing = opts.signing;
+    this.extraHeaders = opts.extraHeaders;
   }
 
   /**
@@ -213,6 +246,19 @@ export class MCPClient {
     };
     if (params !== undefined) payload.params = params;
 
+    // Q5c — sign `tools/call` when a signing key is configured. Built
+    // before the retry loop so a single invocation reuses the same
+    // nonce/iat pair across transient-retry attempts. Server Redis
+    // replay defence accepts only one successful verification per
+    // `(kid, nonce)`, so reusing the header on a retry after a 5xx
+    // simply repeats the verification that already passed (or fails
+    // the same way it already failed).
+    //
+    // Operator-visible idempotency break: retry after server-side nonce
+    // commit + 5xx will return `nonce_replayed` (intentional fail-closed;
+    // operators must re-sign the envelope to retry).
+    const signatureHeader = this.buildSignatureHeader(method, params);
+
     let attempt = 0;
     let lastErr: unknown = null;
     while (attempt <= this.maxRetries) {
@@ -223,7 +269,7 @@ export class MCPClient {
       try {
         resp = await this.fetchImpl(this.endpoint, {
           method: 'POST',
-          headers: this.buildHeaders(),
+          headers: this.buildHeaders(signatureHeader),
           body: JSON.stringify(payload),
           signal: controller.signal,
         });
@@ -253,7 +299,14 @@ export class MCPClient {
         throw new AlterPaymentRequired(this.guessToolName(payload), envelope);
       }
       if (resp.status === 429) {
-        const retryAfter = Number(resp.headers.get('Retry-After') ?? 60);
+        // sdk/L-1 pentest 2026-04-17: Retry-After is server-controlled. Cap
+        // to 300 s so a hostile server can't amplify a single 429 into an
+        // indefinite sleep / agent hang. Fall back to 60 s when the header
+        // is missing or non-numeric.
+        const rawRetryAfter = Number(resp.headers.get('Retry-After') ?? 60);
+        const retryAfter = Number.isFinite(rawRetryAfter) && rawRetryAfter >= 0
+          ? Math.min(rawRetryAfter, 300)
+          : 60;
         if (attempt > this.maxRetries) {
           throw new AlterRateLimited(`HTTP 429 on ${method}`, retryAfter);
         }
@@ -294,15 +347,41 @@ export class MCPClient {
     throw lastErr ?? new AlterNetworkError(`MCP ${method}: exhausted retries`);
   }
 
-  private buildHeaders(): Record<string, string> {
+  private buildHeaders(extra?: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = {
+      ...(this.extraHeaders ?? {}),
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'User-Agent': `${this.clientInfo.name}/${this.clientInfo.version}`,
     };
     if (this.apiKey) headers['X-ALTER-API-Key'] = this.apiKey;
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
+    if (extra) Object.assign(headers, extra);
     return headers;
+  }
+
+  /**
+   * Produce the `Mcp-Invocation-Signature` header for a `tools/call`
+   * payload, when signing is configured. Returns `undefined` when no
+   * signing key is attached or the method is not `tools/call`.
+   */
+  private buildSignatureHeader(
+    method: string,
+    params: Record<string, unknown> | unknown[] | undefined,
+  ): Record<string, string> | undefined {
+    if (!this.signing) return undefined;
+    if (method !== 'tools/call') return undefined;
+    const p = params as { name?: string; arguments?: Record<string, unknown> } | undefined;
+    if (!p?.name) return undefined;
+    // Lazy import so consumers that never sign don't load the signer.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { signInvocation } = require('./signing.js') as typeof import('./signing.js');
+    const headerValue = signInvocation(p.name, p.arguments ?? {}, {
+      kid: this.signing.kid,
+      privateKey: this.signing.privateKey,
+      handle: this.signing.handle,
+    });
+    return { 'Mcp-Invocation-Signature': headerValue };
   }
 
   private async extractPaymentEnvelope(resp: Response): Promise<PaymentEnvelope> {

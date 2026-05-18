@@ -139,8 +139,8 @@ async function main() {
     tool: 'compute_belonging',
     params: {
       role_archetype: 'distributed-systems-engineer',
-      // Candidate-less per D-CO23-pending flow — see README banner.
-      candidate_handle: null,
+      // Member-less per D-CO23-pending flow — see README banner.
+      member_handle: null,
     },
     nonce,
     issued_at: new Date().toISOString(),
