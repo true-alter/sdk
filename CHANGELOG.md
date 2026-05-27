@@ -114,18 +114,13 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
 
 ### Removed
 
-- **Cosmology-surface tool listings.** `seat_status`, `respond_to_offering`,
-  and `subscribe_announcements` were withdrawn from the live MCP server in
-  hotfix #421 (11 Apr 2026) but the SDK still advertised them in
-  `FREE_TOOL_NAMES`, `ToolInputs`/`ToolOutputs`, the registries
-  (`TOOL_TIERS`, `TOOL_COSTS`, `TOOL_BLAST_RADIUS`), and as `seatStatus()`,
-  `respondToOffering()`, `subscribeAnnouncements()` methods on
-  `AlterClient`. Removed from the SDK surface so it matches what the
-  server actually serves; calling these methods would have failed with a
-  tool-not-found error against the live endpoint regardless.
-- **Type exports** `SeatStatusInput`, `SeatStatusOutput`,
-  `RespondToOfferingInput`, `RespondToOfferingOutput`,
-  `SubscribeAnnouncementsInput`, `SubscribeAnnouncementsOutput`.
+- **Three experimental tool method bindings** whose server-side handlers
+  were withdrawn from the live MCP surface in hotfix #421 (11 Apr 2026).
+  The SDK still advertised them in `FREE_TOOL_NAMES`, the registries
+  (`TOOL_TIERS`, `TOOL_COSTS`, `TOOL_BLAST_RADIUS`), and as methods on
+  `AlterClient`. Now removed so the SDK matches what the server actually
+  serves; calls would have failed with a tool-not-found error against
+  the live endpoint regardless. Corresponding type exports also removed.
 
 ### Changed
 
