@@ -2,15 +2,11 @@
  * @truealter/sdk — alter_homepage MCP tool types
  *
  * Wire-format types for the user-authored, externally-queryable identity
- * homepage surface ratified (proposed) as D-CUST-PORTFOLIO-1 in
- * alter-internal Session 54.
+ * homepage surface.
  *
- * Tool name note: ratified-as `alter_portfolio` in the proposed DR;
- * shipping as `alter_homepage` because `alter_portfolio` is already
- * taken by the verified-attestations tool in mcp-alter (different
- * concept). Per the handover's explicit fallback. The DR text and
- * companion docs may still say "portfolio" — the wire-format and
- * tool-name-on-server are `homepage`.
+ * Tool name note: shipping as `alter_homepage` because `alter_portfolio`
+ * is already taken by the verified-attestations tool (different concept).
+ * The wire-format and tool-name-on-server are `homepage`.
  *
  * Wire-format rule: every field name matches the JSON Schema property
  * name exactly (snake_case). These are passed straight into JSON-RPC
@@ -74,11 +70,11 @@ export interface HomepageManifest {
   opener?: HomepageField<string>;
 
   /**
-   * Composed-glyph string (from typed primitives, D-CUST-1 M3). The
-   * sigil is a string of renderer-recognised primitive references —
-   * not raw glyph codes — so different consumers can render the same
-   * sigil distinctly. Provenance is `declared` for user-composed,
-   * `derived` for sigil-from-thread-graph crystallisation.
+   * Composed-glyph string from typed primitives. The sigil is a string
+   * of renderer-recognised primitive references — not raw glyph codes —
+   * so different consumers can render the same sigil distinctly.
+   * Provenance is `declared` for user-composed, `derived` for
+   * sigil-from-thread-graph crystallisation.
    */
   sigil?: HomepageField<string>;
 
@@ -172,9 +168,7 @@ export type HomepageCallerVertical =
   | "unknown";
 
 /** Maximum sizes from the spec. SDK consumers can use these to validate
- *  input before sending. Mirrored from
- *  `docs/technical/alter-portfolio-manifest-v1.md` (forthcoming) and
- *  the proposed-D-CUST-PORTFOLIO-1 DR. */
+ *  input before sending. */
 export const HOMEPAGE_LIMITS = {
   whoami_max_chars: 240,
   opener_max_chars: 280,

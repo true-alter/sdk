@@ -1,16 +1,11 @@
 /**
- * @truealter/sdk — theme pack types (D-CUST-1 substrate, Wave 2)
+ * @truealter/sdk — theme pack types (Wave 2)
  *
  * Wire-format types for ALTER theme packs and `themes.lock` composition
- * manifests. The full specification lives in
- * `docs/technical/alter-theme-pack-spec-v1.md`; the architecture spike
- * (with threat model F1–F10) lives in
- * `.repos/internal/02-Technical-Strategy/alter-theme-packs-architecture-spike.md`.
- *
- * These types describe the on-the-wire shape of theme manifests as they
- * are produced by `alter theme install`, persisted to `themes.lock`,
- * and shared via the `theme_share` MCP tool. They do NOT describe the
- * runtime renderer's internal state.
+ * manifests. These types describe the on-the-wire shape of theme
+ * manifests as they are produced by `alter theme install`, persisted to
+ * `themes.lock`, and shared via the `theme_share` MCP tool. They do NOT
+ * describe the runtime renderer's internal state.
  *
  * No runtime side effects, no external imports, ESM-compatible.
  */
@@ -178,14 +173,13 @@ export interface ThemesLockV1 {
 }
 
 // =============================================================================
-// theme_share MCP tool (D-CUST-1 Wave 2)
+// theme_share MCP tool (Wave 2)
 // =============================================================================
 
 /**
- * Input arguments for the `theme_share` MCP tool. Sharing emits a 5:1
- * return event to the sharer (recognition credit + pack citation) and
- * to the recipient (discovery signal). Implementation lives in
- * `mcp-alter` per D-RS15.
+ * Input arguments for the `theme_share` MCP tool. Sharing emits a
+ * recognition credit and pack citation to the sharer, and a discovery
+ * signal to the recipient.
  */
 export interface ThemeShareInput {
   /** Recipient ~handle. */

@@ -3,21 +3,18 @@
 > **Non-normative banner.** This example demonstrates a **member-less**
 > agent-to-agent flow: `~cc-opus-4-6` (requester) pays `~cc-sonnet-4-6`
 > (provider) under an Alter Accord handshake for a single L2 priced
-> query. The **D-CO23 agent-to-agent metadata exclusion is a PENDING
-> Decision Register entry** (flagged in
-> `standup-as-category-deep-dive` Part IV). Until D-CO23 is ratified,
-> the split calculation shown here — in particular what happens to the
+> query. The agent-to-agent metadata exclusion for the member share is
+> **pending a protocol decision**. Until that decision is ratified, the
+> split calculation shown here — in particular what happens to the
 > 7500 bps ordinarily earmarked for the member — is
 > **illustrative-only**. Do not treat this example as the canonical
 > agent-to-agent split; it is a structural reference only.
 
 ## What this example shows
 
-ALTER's irreducible core #1 per
-`.repos/internal/02-Technical-Strategy/obsolescence-map-2026-04-13.md`
-Part III: **agent-to-agent identity + payment**. The reference flow is
-the proof artefact for the wedge — two Instrument-tier handles
-transacting across the ALTER rails with:
+**Agent-to-agent identity and payment** — the core ALTER use-case for
+agent-to-agent rails. The reference flow is the proof artefact — two
+Instrument-tier handles transacting across the ALTER rails with:
 
 1. **DNS-based discovery** of the provider's MCP surface (SDK
    `discover()`; reference flow injects the `.well-known/alter.json`
@@ -25,8 +22,7 @@ transacting across the ALTER rails with:
 2. **Alter Accord handshake** — a bilateral consent envelope both
    parties sign before any priced traffic. The JSON in `accord.json`
    is a mirror of the normative CBOR/COSE form spelled out in
-   `draft-morrison-identity-accord-00` (see
-   `.repos/internal/02-Technical-Strategy/alter-accord-implementation-plan.md`).
+   `draft-morrison-identity-accord-00`.
 3. **x402 priced query** — the provider emits a `PaymentEnvelope`,
    the requester runs it through `X402Client.authorise()` with a
    mock signer (we never touch Base mainnet), the settlement
@@ -34,10 +30,10 @@ transacting across the ALTER rails with:
 4. **Signed response** — the provider returns a `PricedQueryReceipt`
    carrying:
    - the settlement reference,
-   - the D-CD1 split breakdown (`member_bps` / `facilitator_bps` /
-     `alter_bps` / `cooperative_bps`, plus `alter_bps` when
-     D-RS8 applies),
-   - a **D-ID8 trailer block** on the receipt itself:
+   - the revenue split breakdown (`member_bps` / `facilitator_bps` /
+     `alter_bps` / `cooperative_bps`, plus org-attested redirects
+     where applicable),
+   - a D-ID8 trailer block on the receipt itself:
      `Acted-By: ~blake` (Sovereign) and
      `Drafted-With: ~cc-sonnet-4-6` (Instrument).
 5. **Cryptographic receipt verification** at the requester:
@@ -86,15 +82,15 @@ response preview, and the D-CD1 split.
 > `shared.ts:loadEnv()` throws on `MAINNET=true` unless
 > `I_UNDERSTAND_THIS_WILL_SPEND_REAL_USDC=1` is also set.
 
-## Referenced Decisions
+## Protocol anchors in this flow
 
-| Decision | Role in this flow |
-|----------|-------------------|
-| **D-ID8** | Every signed receipt carries the `Acted-By` / `Drafted-With` trailer block. Requester and provider are Instrument-tier handles (`~cc-*`); the provider's Sovereign anchor (`Acted-By: ~blake`) is recorded on the wire. |
-| **D-ACC1** | First Alter Accord ceremony format. `accord.json` is the JSON mirror of the normative CBOR/COSE envelope; both parties Ed25519-sign the canonical serialisation before any priced traffic. |
-| **D-CD1** | 75 / 5 / 15 / 5 revenue split (member / facilitator / ALTER / cooperative). Visible in `shared.ts:computeSplit()` and surfaced on every receipt. |
-| **D-RS8** | When the receipt is org-attested, 10% of ALTER's 15% is redirected to the Org Alter (1500 → 1350 + 150 bps). The reference flow toggles this on to show both branches. |
-| **D-CO23** | Anti-extraction 5:1 per-stream rule. **The agent-to-agent metadata exclusion is PENDING** — banner above. The reference flow's treatment of the member share when no member exists is illustrative-only. |
+| Concept | Role in this flow |
+|---------|-------------------|
+| **Identity trailer (D-ID8)** | Every signed receipt carries the `Acted-By` / `Drafted-With` trailer block. Requester and provider are Instrument-tier handles (`~cc-*`); the provider's Sovereign anchor is recorded on the wire. |
+| **Alter Accord ceremony** | `accord.json` is the JSON mirror of the normative CBOR/COSE envelope; both parties Ed25519-sign the canonical serialisation before any priced traffic. |
+| **Revenue split** | 75 / 5 / 15 / 5 bps (member / facilitator / ALTER / cooperative). Visible in `shared.ts:computeSplit()` and surfaced on every receipt. |
+| **Org-attested redirect** | When the receipt is org-attested, 10% of ALTER's 15% is redirected to the Org Alter. The reference flow toggles this on to show both branches. |
+| **Agent-to-agent exclusion** | Anti-extraction 5:1 per-stream rule. **The agent-to-agent metadata exclusion is PENDING** — see banner above. The reference flow's treatment of the member share when no member exists is illustrative-only. |
 
 ## Security considerations
 
@@ -139,15 +135,11 @@ Production deployments should additionally:
 - treat any mismatch as a full-session abort plus escalation signal
   to the Org Alter.
 
-### Repo-separation rule
+### Repo note
 
-This file lives under `packages/alter-identity/examples/` — the
-SOLE approved `packages/` entry in the monorepo. The example
-**does not expand the SDK surface**; every inlined helper carries a
-`TODO(sdk):` marker pointing at where the primitive should eventually
-graduate. Never port this example under `packages/` as a separate
-entry, and never move SDK primitives into a sibling directory
-structure that breaches the repo-separation rule.
+The example **does not expand the SDK surface**; every inlined helper
+carries a `TODO(sdk):` marker pointing at where the primitive should
+eventually graduate into the canonical SDK.
 
 ## TODO(sdk) markers
 

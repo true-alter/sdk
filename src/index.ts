@@ -137,7 +137,7 @@ export {
 // Types — re-export everything from the generated types module
 export * from './types.js';
 
-// alter_homepage — D-CUST-PORTFOLIO-1 wire format (shipped as `homepage`
+// alter_homepage — wire format (shipped as `homepage`
 // because `alter_portfolio` is taken by the attestations tool)
 export type {
   HomepageCallerVertical,
@@ -149,7 +149,7 @@ export type {
 } from './homepage.js';
 export { HOMEPAGE_LIMITS } from './homepage.js';
 
-// Theme packs — D-CUST-1 substrate (Wave 2 implementation)
+// Theme packs — Wave 2 implementation
 export type {
   GreetingRegister,
   Osc8AllowedScheme,
