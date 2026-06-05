@@ -1,3 +1,5 @@
+> **DEPRECATED READ-ONLY MIRROR.** This repository (`true-alter/alter-identity`) is a deprecated, structurally non-publishable mirror. The canonical `@truealter/sdk` is built and published from the ALTER monorepo. This repo is `"private": true` — it cannot be published to npm and must not be. Do not open PRs expecting upstream sync; file issues against the monorepo instead.
+
 # @truealter/sdk
 
 ALTER Identity SDK - query the continuous identity field from any JavaScript/TypeScript environment.
@@ -53,7 +55,6 @@ is a slim, task-oriented binary for day-to-day use:
 |---|---|
 | `alter login` | OAuth loopback sign-in; stores a session at `~/.config/alter/session.json` (mode `0600`). |
 | `alter depth [--json]` | GET `/api/v1/identity/depth` - identity-depth score, agentic activity, top/bottom five traits. |
-<!-- TODO(D4): "claim" is a Recognition Over Qualification violation - rename to "redeem" or "accept-invite" in alter-cli + update here -->
 | `alter claim <claim_code>` | Accept an identity invite. Prompts for email, password (min 12 chars, hidden), and explicit TOS acceptance, then POSTs `/api/v1/identity/claim`. |
 | `alter mirror` | Day-2 Mirror phase + streak. `alter mirror daily` claims today's Mirror; `alter mirror next` shows the next revelation window. |
 | `alter discover [--limit N]` | MCP-backed summary - calls `alter_whoami` and `alter_verify` against your bound handle. Degrades gracefully if the MCP endpoint is 5xx. |
