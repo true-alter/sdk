@@ -1,4 +1,4 @@
-> **Public source mirror of `@truealter/sdk`.** The package is built and published from the ALTER platform; this repository is the public reference for the SDK source. File issues here or against the platform. Pull requests are welcome and are back-ported on each tagged release.
+> **Public source for `@truealter/sdk`.** This repository is the public reference for the SDK that ships on npm. File issues here. Pull requests are welcome and are incorporated into tagged releases.
 
 # @truealter/sdk
 
@@ -12,7 +12,7 @@ ALTER Identity SDK. Query the continuous identity field from any JavaScript or T
 [![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/alter-identity)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/alter-identity)
 
 > **Install:** `npm install @truealter/sdk`
-> **Publish channel:** this repository is the public source mirror of the SDK that ships as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk) on npm. The canonical build and publish flow lives in ALTER's monorepo; PRs and issues are welcome here, and upstream sync happens on each tagged release.
+> **Publish channel:** the SDK ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). This repository is its public source; PRs and issues are welcome here and are incorporated into tagged releases.
 
 A thin client over the ALTER MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spec `2025-11-25`) with x402 micropayment support, ES256 provenance verification, and config generators for Claude Code, Cursor, and generic MCP clients.
 
@@ -473,7 +473,7 @@ docker run --rm alter-identity alter-identity verify ~truealter
 
 ## Contributing
 
-Bug reports and small patches welcome: see [CONTRIBUTING.md](./CONTRIBUTING.md). This repository is a public source mirror; the canonical build lives in ALTER's monorepo, and merged PRs are back-ported on each tagged release.
+Bug reports and small patches welcome: see [CONTRIBUTING.md](./CONTRIBUTING.md). Merged PRs are incorporated into tagged releases.
 
 ## Security
 

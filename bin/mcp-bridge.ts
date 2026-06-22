@@ -26,6 +26,7 @@ import { stdin, stdout, stderr, exit, env } from 'node:process';
 
 import { MCPClient } from '../src/mcp.js';
 import { AlterError, AlterPaymentRequired } from '../src/errors.js';
+import { SDK_VERSION } from '../src/meta.js';
 
 const ENDPOINT =
   env.ALTER_MCP_ENDPOINT ?? 'https://mcp.truealter.com/api/v1/mcp';
@@ -64,7 +65,7 @@ console.warn(
 const client = new MCPClient({
   endpoint: ENDPOINT,
   apiKey: API_KEY,
-  clientInfo: { name: '@truealter/sdk-mcp-bridge', version: '0.2.0' },
+  clientInfo: { name: '@truealter/sdk-mcp-bridge', version: SDK_VERSION },
   extraHeaders: EXTRA_HEADERS,
 });
 

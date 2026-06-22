@@ -7,10 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] (2026-05-18)
 
-Resynced from canonical monorepo source. This release closes the public-mirror
-gap between `0.2.4` (the last tagged mirror release) and `0.5.0` (the version
-shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`,
-`0.4.2`, `0.4.3`, and `0.5.0` are summarised below.
+This release brings the published SDK source to `0.5.0`, the version
+shipping on npm as `@truealter/sdk`. Intermediate npm releases `0.2.4`,
+`0.3.0`, `0.4.2`, `0.4.3`, and `0.5.0` are summarised below.
 
 ### Added
 
@@ -42,8 +41,7 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
   Bridge now reads an `ALTER_BRIDGE_HEADERS` environment variable
   (JSON object, full escape hatch) at start-up and applies its entries
   as additional request headers.
-- **`CONTRIBUTING.md`**: workflow, scope, and back-port policy for
-  this public source mirror.
+- **`CONTRIBUTING.md`**: contributor workflow and scope.
 - **`SECURITY.md`**: disclosure address (`security@truealter.com`),
   scope boundaries, and a short summary of prior hardening already
   shipped in the SDK.

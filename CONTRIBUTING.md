@@ -1,6 +1,6 @@
 # Contributing to @truealter/sdk
 
-This repository is the **public source mirror** of the SDK that ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). The canonical build + publish flow lives in ALTER's monorepo. Upstream sync happens on each tagged release, so patches merged here are back-ported to the monorepo before the next release.
+This repository is the **public source** of the SDK that ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). Patches merged here are incorporated into tagged releases.
 
 ## Quick orientation
 
@@ -30,7 +30,7 @@ npm run build
 
 ## Small patches welcome
 
-Typo fixes, README clarifications, tightened error messages, extra test coverage, better TypeScript types: open a PR against `main`. Keep each PR focused on one concern, the monorepo sync is cleaner that way.
+Typo fixes, README clarifications, tightened error messages, extra test coverage, better TypeScript types: open a PR against `main`. Keep each PR focused on one concern.
 
 ## Larger design changes
 
