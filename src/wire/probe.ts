@@ -7,7 +7,7 @@
  *   - claude-desktop: platform config directory exists
  *   - vscode        : VS Code user data directory exists
  *
- * The probe is deliberately permissive — "the config directory exists"
+ * The probe is deliberately permissive, "the config directory exists"
  * means either the app is installed or was recently installed. Wire
  * will still refuse if the config file ends up on a synced volume.
  */
@@ -20,9 +20,9 @@ import { ALL_CLIENTS, type ClientId, type ClientPaths } from './paths.js';
 export interface ProbeResult {
   client: ClientPaths;
   installed: boolean;
-  /** Only present for claude-code — records `claude --version` output when resolvable. */
+  /** Only present for claude-code, records `claude --version` output when resolvable. */
   version?: string;
-  /** Diagnostic trail — why we said installed/not. */
+  /** Diagnostic trail, why we said installed/not. */
   reason: string;
 }
 

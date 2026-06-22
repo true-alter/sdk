@@ -1,8 +1,8 @@
 {
-  "name": "@truealter/sdk-mirror-deprecated",
-  "version": "0.5.0",
+  "name": "@truealter/sdk",
+  "version": "0.5.8",
   "private": true,
-  "description": "ALTER Identity SDK — query the continuous identity field from any JavaScript/TypeScript environment",
+  "description": "ALTER Identity SDK. Query the continuous identity field from any JavaScript or TypeScript environment.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.cjs",

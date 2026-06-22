@@ -33,15 +33,15 @@
     "member_data": false,
     "passive_signals": false,
     "agent_to_agent_metadata": true,
-    "note": "D-CO23 agent-to-agent metadata exclusion is PENDING ratification (flagged in standup-as-category-deep-dive Part IV). Until ratified, this flag is illustrative; production accords must re-validate the consent gates against the live Decision Register."
+    "note": "The handling of the member share for member-less agent-to-agent flows is still being finalised. Until then this flag is illustrative; production accords must re-validate the consent gates against the live protocol rules."
   },
   "split": {
-    "policy": "D-CD1",
+    "policy": "alter-revenue-split",
     "member_bps": 7500,
     "facilitator_bps": 500,
     "alter_bps": 1500,
     "cooperative_bps": 500,
-    "note": "75/5/15/5 = 10000 bps. Agent-to-agent flows with no member re-route the 7500 bps member share per the pending D-CO23 DR entry. Until ratified, split math is illustrative-only."
+    "note": "75/5/15/5 = 10000 bps. Agent-to-agent flows with no member re-route the 7500 bps member share once that handling is finalised. Until then, split math is illustrative-only."
   },
   "revocation": {
     "mode": "immediate",

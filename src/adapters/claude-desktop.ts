@@ -1,7 +1,7 @@
 /**
  * Claude Desktop MCP config helper.
  *
- * Claude Desktop speaks stdio only — it does not currently dial
+ * Claude Desktop speaks stdio only, it does not currently dial
  * Streamable-HTTP MCP servers directly. The canonical bridge is our
  * own `alter-mcp-bridge` binary, which is published alongside this CLI
  * in the same npm package. Desktop hosts then spawn the bridge as a
@@ -49,7 +49,7 @@ export function generateClaudeDesktopConfig(
   const entry: ClaudeDesktopServerConfig = {
     command: bridgeCommand,
     env,
-    description: 'ALTER Identity — psychometric identity field for AI agents',
+    description: 'ALTER Identity, psychometric identity field for AI agents',
   };
   if (opts.extraArgs && opts.extraArgs.length > 0) {
     entry.args = [...opts.extraArgs];

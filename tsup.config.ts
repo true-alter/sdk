@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 // Two builds: the library (ESM + CJS, no shebang) and the CLI (ESM, with
 // shebang). Splitting them keeps the library tree-shakeable and avoids
-// double-banner issues — the CLI source already declares its own shebang.
+// double-banner issues, the CLI source already declares its own shebang.
 export default defineConfig([
   {
     entry: { index: 'src/index.ts' },
@@ -10,7 +10,7 @@ export default defineConfig([
     dts: true,
     splitting: false,
     // Library sourcemaps ship the full TypeScript source to any npm consumer
-    // via the package allowlist — keep library drop off-map.
+    // via the package allowlist, keep library drop off-map.
     sourcemap: false,
     clean: true,
     target: 'node18',
@@ -33,8 +33,8 @@ export default defineConfig([
     format: ['esm'],
     dts: false,
     splitting: false,
-    // CLI sourcemaps also ship via package.json "dist/" allowlist — disable
-    // to prevent full TypeScript source leaking to npm consumers (sdk/H-1).
+    // CLI sourcemaps also ship via package.json "dist/" allowlist, disable
+    // to prevent full TypeScript source leaking to npm consumers.
     sourcemap: false,
     clean: false,
     target: 'node18',

@@ -6,7 +6,7 @@
  * periodically and is published at `<api-host>/.well-known/alter-keys.json`
  * as a JWKS.
  *
- * This module verifies tokens *without* a JWT library — pure WebCrypto
+ * This module verifies tokens *without* a JWT library, pure WebCrypto
  * (subtle.verify) keeps the dep graph small and works in every modern
  * runtime (Node 18+, Deno, Bun, Cloudflare Workers, browser).
  */
@@ -69,7 +69,7 @@ const JWKS_CACHE_MAX_ENTRIES = 32;
  *
  * Without this allowlist, a hostile MCP server could point `verify_at`
  * at an attacker-controlled JWKS and pass ES256 verification with its own
- * signing key — the classic "confused-deputy via server-supplied trust
+ * signing key, the classic "confused-deputy via server-supplied trust
  * anchor" pattern. Any hostname not on this list (or the caller-supplied
  * extension) is rejected before a network fetch is issued. Downstream
  * integrators with their own deployment can extend the list via the
@@ -84,15 +84,14 @@ export const DEFAULT_VERIFY_AT_ALLOWLIST: readonly string[] = Object.freeze([
 /**
  * The `iss` claim that ALTER's platform signs into every provenance token.
  * Verifiers check `payload.iss` against this constant (or the caller-supplied
- * `expectedIss` override) to prevent cross-identity substitution — IaI clause
- * #2 (provenance).
+ * `expectedIss` override) to prevent cross-identity substitution.
  */
 export const ALTER_PLATFORM_ISS = 'did:alter:platform';
 
 export interface VerifyProvenanceOptions {
   /**
    * Override the JWKS URL entirely. Takes precedence over both the
-   * allowlist and any `verify_at` on the envelope — if the caller pins
+   * allowlist and any `verify_at` on the envelope, if the caller pins
    * an explicit URL, we use it verbatim (the caller has already vouched
    * for the origin).
    */
@@ -100,7 +99,7 @@ export interface VerifyProvenanceOptions {
   /**
    * Hostnames that are trusted when resolving `envelope.verify_at`.
    * Defaults to {@link DEFAULT_VERIFY_AT_ALLOWLIST}. Passing a list
-   * here *replaces* the default — include the ALTER canonicals if you
+   * here *replaces* the default, include the ALTER canonicals if you
    * still want them accepted.
    */
   verifyAtAllowlist?: readonly string[];
@@ -110,7 +109,7 @@ export interface VerifyProvenanceOptions {
    * Expected `iss` claim. Defaults to {@link ALTER_PLATFORM_ISS}
    * (`"did:alter:platform"`). Pass an explicit value only when verifying
    * tokens minted by a non-platform issuer (e.g. a test fixture or a
-   * whitelabelled deployment). An empty string disables the check — not
+   * whitelabelled deployment). An empty string disables the check, not
    * recommended for production use.
    */
   expectedIss?: string;
@@ -127,7 +126,7 @@ export interface VerifyProvenanceOptions {
  * Security: when the envelope carries a `verify_at` hint, the hostname
  * MUST be on the allowlist (default: `api.truealter.com`,
  * `mcp.truealter.com`; extend via `verifyAtAllowlist`). `http:` URLs are
- * rejected unconditionally — JWKS fetch must be TLS.
+ * rejected unconditionally, JWKS fetch must be TLS.
  */
 export async function verifyProvenance(
   envelope: ProvenanceEnvelope | string,
@@ -162,7 +161,7 @@ export async function verifyProvenance(
   const allowlist = opts.verifyAtAllowlist ?? DEFAULT_VERIFY_AT_ALLOWLIST;
   let jwksUrl: string;
   if (opts.jwksUrl) {
-    // Caller-supplied URL takes precedence and bypasses the allowlist —
+    // Caller-supplied URL takes precedence and bypasses the allowlist -
     // the caller has already vouched for this origin. We still enforce
     // https-only to keep JWKS fetches off plaintext HTTP.
     if (!opts.jwksUrl.startsWith('https://')) {
@@ -231,9 +230,9 @@ export async function verifyProvenance(
     return { valid: false, reason: 'issued in the future', payload, kid: header.kid };
   }
 
-  // S8-H-1: validate `iss` claim to prevent cross-identity substitution (IaI
-  // clause #2 — provenance). The expected issuer defaults to the ALTER platform
-  // DID; callers may override via `opts.expectedIss` for non-platform issuers.
+  // Validate `iss` claim to prevent cross-identity substitution. The expected
+  // issuer defaults to the ALTER platform DID; callers may override via
+  // `opts.expectedIss` for non-platform issuers.
   // An explicit empty string opts out of the check (test fixtures only).
   const expectedIss = opts.expectedIss !== undefined ? opts.expectedIss : ALTER_PLATFORM_ISS;
   if (expectedIss !== '' && payload.iss !== expectedIss) {
@@ -309,7 +308,7 @@ async function fetchJwks(url: string, fetchImpl: typeof fetch): Promise<JwksDocu
 
   let resp: Response;
   try {
-    // `redirect: "manual"` — the allowlist gate runs on the initial URL only;
+    // `redirect: "manual"`, the allowlist gate runs on the initial URL only;
     // a 3xx to an attacker-controlled origin would otherwise silently defeat
     // the allowlist. Any redirect is rejected explicitly below.
     resp = await fetchImpl(url, {
@@ -357,7 +356,7 @@ async function fetchJwks(url: string, fetchImpl: typeof fetch): Promise<JwksDocu
     throw new AlterProvenanceError(`invalid JWKS at ${url}`);
   }
 
-  // FIFO eviction — Map preserves insertion order, so the first key is the
+  // FIFO eviction, Map preserves insertion order, so the first key is the
   // oldest. Keeps the cache bounded under legitimate rotation and hostile
   // cache-fill attempts alike.
   if (_jwksCache.size >= JWKS_CACHE_MAX_ENTRIES && !_jwksCache.has(cacheKey)) {
@@ -382,7 +381,7 @@ function jwksCacheKey(url: string): string {
  * JWKS URL, enforcing scheme + hostname allowlisting.
  *
  * - Relative paths (`/…` or `foo/bar`) resolve against `api.truealter.com`
- *   over https — the canonical ALTER JWKS host.
+ *   over https, the canonical ALTER JWKS host.
  * - Absolute URLs must use `https:` (plaintext `http:` is rejected
  *   unconditionally) and the hostname must be a case-insensitive exact
  *   match against `allowlist`.
@@ -400,7 +399,7 @@ export function resolveVerifyAt(
     throw new Error('verify_at must be a non-empty string');
   }
 
-  // Reject plaintext HTTP before we even try to parse — belt and braces.
+  // Reject plaintext HTTP before we even try to parse, belt and braces.
   if (/^http:\/\//i.test(verifyAt)) {
     throw new Error(`http: scheme is not permitted (got ${verifyAt})`);
   }
@@ -424,7 +423,7 @@ export function resolveVerifyAt(
     throw new Error(`verify_at must be https: ${verifyAt}`);
   }
 
-  // Reject `user:pass@host` forms — the Basic-auth credential would be
+  // Reject `user:pass@host` forms, the Basic-auth credential would be
   // sent verbatim to the JWKS origin, leaking whatever the caller embedded
   // into a URL that only looked trusted because of the hostname.
   if (parsed.username || parsed.password) {

@@ -1,5 +1,6 @@
 /**
- * requester.ts — runs as ~cc-opus-4-6 (Instrument-tier per D-ID8).
+ * requester.ts: runs as ~cc-opus-4-6 (Instrument-tier; carries the
+ * identity trailer naming the acting Sovereign and the drafting Instrument).
  *
  * End-to-end flow:
  *   1. Load accord.json template, populate with both parties' Ed25519
@@ -105,14 +106,14 @@ async function main() {
   const requesterKeypair = loadOrCreateKeypair(env.REQUESTER_PRIVATE_KEY_PATH);
   const providerKeypair = loadOrCreateKeypair(env.PROVIDER_PRIVATE_KEY_PATH);
   // In production, the requester never holds the provider's private
-  // key — we load both here because the example runs both agents in
+  // key, we load both here because the example runs both agents in
   // one process.
   const provider = new Provider(env, providerKeypair);
 
   // ── Discovery ────────────────────────────────────────────────────────
   const discovered = fakeDiscovery(env, providerKeypair);
   if (!discovered.publicKey) throw new Error('Discovery missing provider public key');
-  // Strip the `ed25519:` prefix if present — alter.json carries the
+  // Strip the `ed25519:` prefix if present, alter.json carries the
   // hex public key directly per auth.ts conventions.
   const providerPkHex = discovered.publicKey.replace(/^ed25519:/, '');
 
@@ -139,7 +140,8 @@ async function main() {
     tool: 'compute_belonging',
     params: {
       role_archetype: 'distributed-systems-engineer',
-      // Member-less per D-CO23-pending flow — see README banner.
+      // Member-less flow whose member-share handling is still being
+      // finalised, see README banner.
       member_handle: null,
     },
     nonce,
@@ -150,7 +152,7 @@ async function main() {
   const envelopePayment = provider.quote(request);
   const x402 = new X402Client({
     signer: new MockX402Signer(env.FACILITATOR_URL),
-    maxPerQuery: env.PRICED_QUERY_AMOUNT, // policy cap — reject anything dearer
+    maxPerQuery: env.PRICED_QUERY_AMOUNT, // policy cap, reject anything dearer
     networks: [env.X402_NETWORK],
     assets: [env.X402_ASSET],
   });
@@ -175,7 +177,7 @@ async function main() {
   // even before the Ed25519 verify succeeded.
   if (signed.signer_public_key !== providerPkHex) {
     throw new Error(
-      `Provider public key mismatch — discovery advertised ${providerPkHex}, receipt signed by ${signed.signer_public_key}. Abort (possible handle compromise mid-transaction).`,
+      `Provider public key mismatch, discovery advertised ${providerPkHex}, receipt signed by ${signed.signer_public_key}. Abort (possible handle compromise mid-transaction).`,
     );
   }
 
@@ -237,6 +239,6 @@ if (isEntryPoint) {
   void main();
 }
 
-// Silence unused-existsSync warning — reserved for `.env` precedence
+// Silence unused-existsSync warning, reserved for `.env` precedence
 // bookkeeping once the example is wired into a runner.
 void existsSync;

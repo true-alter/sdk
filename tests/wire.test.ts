@@ -7,37 +7,37 @@ import { generateClaudeDesktopConfig } from '../src/adapters/claude-desktop.js';
 import { detectSyncedVolume } from '../src/wire/sync.js';
 import { atomicJsonMerge, restoreFromBackup, sha256 } from '../src/wire/write.js';
 
-describe('wire / sync.ts — synced-volume refusal', () => {
+describe('wire / sync.ts, synced-volume refusal', () => {
   it('refuses iCloud paths', () => {
-    const hit = detectSyncedVolume('/Users/blake/Library/Mobile Documents/com~apple~CloudDocs/.cursor/mcp.json');
+    const hit = detectSyncedVolume('/Users/user/Library/Mobile Documents/com~apple~CloudDocs/.cursor/mcp.json');
     expect(hit).not.toBeNull();
     expect(hit?.matchedPrefix).toBe('Library/Mobile Documents/com~apple~CloudDocs');
   });
 
   it('refuses OneDrive paths', () => {
-    const hit = detectSyncedVolume('/home/blake/OneDrive/Apps/Claude/claude_desktop_config.json');
+    const hit = detectSyncedVolume('/home/user/OneDrive/Apps/Claude/claude_desktop_config.json');
     expect(hit).not.toBeNull();
     expect(hit?.matchedPrefix).toBe('OneDrive');
   });
 
   it('refuses Dropbox paths', () => {
-    const hit = detectSyncedVolume('/Users/blake/Dropbox/.cursor/mcp.json');
+    const hit = detectSyncedVolume('/Users/user/Dropbox/.cursor/mcp.json');
     expect(hit).not.toBeNull();
     expect(hit?.matchedPrefix).toBe('Dropbox');
   });
 
   it('refuses Google Drive paths', () => {
-    const hit = detectSyncedVolume('/Users/blake/Library/CloudStorage/GoogleDrive-blake/Cursor/mcp.json');
+    const hit = detectSyncedVolume('/Users/user/Library/CloudStorage/GoogleDrive-user/Cursor/mcp.json');
     expect(hit).not.toBeNull();
   });
 
   it('allows normal home paths', () => {
-    const hit = detectSyncedVolume('/home/blake/.cursor/mcp.json');
+    const hit = detectSyncedVolume('/home/user/.cursor/mcp.json');
     expect(hit).toBeNull();
   });
 });
 
-describe('wire / write.ts — atomic JSON merge', () => {
+describe('wire / write.ts, atomic JSON merge', () => {
   let tmp: string;
 
   beforeEach(() => {
@@ -80,7 +80,7 @@ describe('wire / write.ts — atomic JSON merge', () => {
     expect(Object.keys(merged.mcpServers).sort()).toEqual(['alter', 'other']);
   });
 
-  it('is idempotent — no-op when merge produces identical bytes', () => {
+  it('is idempotent, no-op when merge produces identical bytes', () => {
     const path = join(tmp, 'mcp.json');
     const initial = JSON.stringify({ mcpServers: { alter: { url: 'x' } } }, null, 2) + '\n';
     writeFileSync(path, initial);
@@ -157,7 +157,7 @@ describe('adapters / claude-desktop', () => {
   it('threads apiKey through env, not argv', () => {
     const cfg = generateClaudeDesktopConfig({ apiKey: 'ak_test' });
     expect(cfg.mcpServers.alter.env?.ALTER_API_KEY).toBe('ak_test');
-    // Must NEVER land in argv — ps listings leak argv but not env.
+    // Must NEVER land in argv, ps listings leak argv but not env.
     expect(cfg.mcpServers.alter.args).toBeUndefined();
   });
 

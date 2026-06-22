@@ -1,46 +1,46 @@
-# Agent-to-Agent Priced Query — Reference Flow
+# Agent-to-Agent Priced Query, Reference Flow
 
 > **Non-normative banner.** This example demonstrates a **member-less**
 > agent-to-agent flow: `~cc-opus-4-6` (requester) pays `~cc-sonnet-4-6`
 > (provider) under an Alter Accord handshake for a single L2 priced
 > query. The agent-to-agent metadata exclusion for the member share is
 > **pending a protocol decision**. Until that decision is ratified, the
-> split calculation shown here — in particular what happens to the
-> 7500 bps ordinarily earmarked for the member — is
+> split calculation shown here, in particular what happens to the
+> 7500 bps ordinarily earmarked for the member, is
 > **illustrative-only**. Do not treat this example as the canonical
 > agent-to-agent split; it is a structural reference only.
 
 ## What this example shows
 
-**Agent-to-agent identity and payment** — the core ALTER use-case for
-agent-to-agent rails. The reference flow is the proof artefact — two
+**Agent-to-agent identity and payment**, the core ALTER use-case for
+agent-to-agent rails. The reference flow is the proof artefact, two
 Instrument-tier handles transacting across the ALTER rails with:
 
 1. **DNS-based discovery** of the provider's MCP surface (SDK
    `discover()`; reference flow injects the `.well-known/alter.json`
    directly so the example is self-contained).
-2. **Alter Accord handshake** — a bilateral consent envelope both
+2. **Alter Accord handshake**, a bilateral consent envelope both
    parties sign before any priced traffic. The JSON in `accord.json`
    is a mirror of the normative CBOR/COSE form spelled out in
    `draft-morrison-identity-accord-00`.
-3. **x402 priced query** — the provider emits a `PaymentEnvelope`,
+3. **x402 priced query**, the provider emits a `PaymentEnvelope`,
    the requester runs it through `X402Client.authorise()` with a
    mock signer (we never touch Base mainnet), the settlement
    reference is attached to the tool retry.
-4. **Signed response** — the provider returns a `PricedQueryReceipt`
+4. **Signed response**, the provider returns a `PricedQueryReceipt`
    carrying:
    - the settlement reference,
    - the revenue split breakdown (`member_bps` / `facilitator_bps` /
      `alter_bps` / `cooperative_bps`, plus org-attested redirects
      where applicable),
-   - a D-ID8 trailer block on the receipt itself:
-     `Acted-By: ~blake` (Sovereign) and
+   - an identity trailer block on the receipt itself:
+     `Acted-By: ~example-provider` (Sovereign) and
      `Drafted-With: ~cc-sonnet-4-6` (Instrument).
 5. **Cryptographic receipt verification** at the requester:
    Ed25519 signature check over canonical-JSON of the receipt,
    nonce match, freshness window, accord-id match, provider
    public-key match against the discovery step.
-6. **Local provenance log** — one JSONL entry per settled query,
+6. **Local provenance log**, one JSONL entry per settled query,
    written through the SDK's auth primitives (no new deps).
 
 ## Files
@@ -51,16 +51,16 @@ Instrument-tier handles transacting across the ALTER rails with:
 | `requester.ts`  | Runs as `~cc-opus-4-6`. Drives the full flow end to end. |
 | `provider.ts`   | Runs as `~cc-sonnet-4-6`. Quote → fulfil → signed receipt. |
 | `shared.ts`     | Accord sign/verify, split math, mock x402 signer, env loader. |
-| `env.example`   | Environment template — **rename to `.env` locally**. Contains only structure, no secrets. |
+| `env.example`   | Environment template, **rename to `.env` locally**. Contains only structure, no secrets. |
 
-## How to run (reference only — do NOT broadcast)
+## How to run (reference only, do NOT broadcast)
 
 ```sh
 cd packages/alter-identity
 
 # Build the SDK once so the examples can import compiled outputs.
 # (The examples import `../../src/*.ts` directly in this reference
-# flow, so `tsc --noEmit` is enough — `npm run build` not required.)
+# flow, so `tsc --noEmit` is enough, `npm run build` not required.)
 npm run typecheck
 
 # Generate ephemeral test keys (never commit). Skip if you've already
@@ -75,7 +75,7 @@ npx tsx examples/agent-to-agent-priced-query/requester.ts
 
 The `requester.ts` entry point pretty-prints a JSON summary:
 `status`, `accord_id`, both handles, the `settlement` block, a
-response preview, and the D-CD1 split.
+response preview, and the revenue split.
 
 > **Do not flip `MAINNET=true`.** The reference flow is deliberately
 > wired to a mock signer so it cannot broadcast. The safety guard in
@@ -86,11 +86,11 @@ response preview, and the D-CD1 split.
 
 | Concept | Role in this flow |
 |---------|-------------------|
-| **Identity trailer (D-ID8)** | Every signed receipt carries the `Acted-By` / `Drafted-With` trailer block. Requester and provider are Instrument-tier handles (`~cc-*`); the provider's Sovereign anchor is recorded on the wire. |
+| **Identity trailer** | Every signed receipt carries the `Acted-By` / `Drafted-With` trailer block. Requester and provider are Instrument-tier handles (`~cc-*`); the provider's Sovereign anchor is recorded on the wire. |
 | **Alter Accord ceremony** | `accord.json` is the JSON mirror of the normative CBOR/COSE envelope; both parties Ed25519-sign the canonical serialisation before any priced traffic. |
 | **Revenue split** | 75 / 5 / 15 / 5 bps (member / facilitator / ALTER / cooperative). Visible in `shared.ts:computeSplit()` and surfaced on every receipt. |
 | **Org-attested redirect** | When the receipt is org-attested, 10% of ALTER's 15% is redirected to the Org Alter. The reference flow toggles this on to show both branches. |
-| **Agent-to-agent exclusion** | Anti-extraction 5:1 per-stream rule. **The agent-to-agent metadata exclusion is PENDING** — see banner above. The reference flow's treatment of the member share when no member exists is illustrative-only. |
+| **Agent-to-agent exclusion** | Anti-extraction 5:1 per-stream rule. **The agent-to-agent metadata exclusion is PENDING**, see banner above. The reference flow's treatment of the member share when no member exists is illustrative-only. |
 
 ## Security considerations
 
@@ -117,7 +117,7 @@ them for consent-tier decisions.
 Revocation emits a signed revocation receipt and any further calls
 under the same `accord_id` are rejected. The reference flow does not
 exercise this path but `provider.revokeAccord()` is wired in with a
-`TODO(sdk)` marker — the SDK has no revocation-receipt primitive
+`TODO(sdk)` marker, the SDK has no revocation-receipt primitive
 yet.
 
 ### Handle compromise mid-transaction
@@ -130,7 +130,7 @@ the mismatch aborts the flow even if the Accord handshake succeeded.
 Production deployments should additionally:
 
 - pin the provider's pk in the Accord envelope itself (already done
-  — see `parties[].public_key`);
+ , see `parties[].public_key`);
 - honour the runtime's key-rotation feed before trusting discovery;
 - treat any mismatch as a full-session abort plus escalation signal
   to the Org Alter.
@@ -146,11 +146,11 @@ eventually graduate into the canonical SDK.
 Grep for `TODO(sdk):` in `shared.ts`, `requester.ts`, `provider.ts`
 to see where SDK primitives are currently stubbed inline:
 
-1. `shared.ts:loadEnv()` — no canonical `loadEnv()` helper in the SDK.
-2. `shared.ts:MockX402Signer` — no canonical `MockX402Signer` in
+1. `shared.ts:loadEnv()`, no canonical `loadEnv()` helper in the SDK.
+2. `shared.ts:MockX402Signer`, no canonical `MockX402Signer` in
    `x402.ts`.
-3. `provider.ts:revokeAccord` — no revocation-receipt primitive yet.
-4. `requester.ts` provenance writer — SDK's `provenance.ts` verifies
+3. `provider.ts:revokeAccord`, no revocation-receipt primitive yet.
+4. `requester.ts` provenance writer, SDK's `provenance.ts` verifies
    ES256 JWS but doesn't ship a local JSONL log writer.
 
 None of these require new dependencies.

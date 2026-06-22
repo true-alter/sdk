@@ -7,7 +7,7 @@
  * post) to make the operation auditable.
  *
  * Append-only semantics: a new wire run rewrites this file in full.
- * Prior state is not retained — the backup siblings on disk are the
+ * Prior state is not retained, the backup siblings on disk are the
  * canonical rollback surface, not this file.
  */
 

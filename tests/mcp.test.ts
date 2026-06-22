@@ -79,8 +79,8 @@ describe('MCPClient', () => {
     const client = new MCPClient({
       endpoint: 'https://mcp.example.test',
       extraHeaders: {
-        'CF-Access-Client-Id': 'cid-abc',
-        'CF-Access-Client-Secret': 'csec-xyz', // pragma: allowlist secret
+        'X-Custom-Gate-Id': 'cid-abc',
+        'X-Custom-Gate-Secret': 'csec-xyz', // pragma: allowlist secret
       },
       fetch: makeFetch(
         (call) => {
@@ -98,8 +98,8 @@ describe('MCPClient', () => {
     expect(calls.length).toBeGreaterThanOrEqual(1);
     for (const call of calls) {
       const headers = call.init.headers as Record<string, string>;
-      expect(headers['CF-Access-Client-Id']).toBe('cid-abc');
-      expect(headers['CF-Access-Client-Secret']).toBe('csec-xyz');
+      expect(headers['X-Custom-Gate-Id']).toBe('cid-abc');
+      expect(headers['X-Custom-Gate-Secret']).toBe('csec-xyz');
     }
   });
 

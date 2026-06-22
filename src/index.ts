@@ -1,16 +1,16 @@
 /**
- * @truealter/sdk — ALTER Identity SDK
+ * @truealter/sdk, ALTER Identity SDK
  *
  * Query the continuous identity field from any JavaScript/TypeScript
  * environment. Wraps the 32 tools exposed at
  * `https://mcp.truealter.com/api/v1/mcp` (24 free L0 + 8 premium L1–L5).
  * Write tools (`submit_*`, `attest_domain`, `dispute_attestation`,
  * `create_identity_stub`) and alter-to-alter messaging tools are not
- * advertised to public callers — they re-enable as the consent
+ * advertised to public callers, they re-enable as the consent
  * architecture and per-peer grant model land. First-class TypeScript
  * types, x402 micropayment support, and ES256 provenance verification.
  *
- * The ALTER endpoint discovery anchor is `truealter.com` — see
+ * The ALTER endpoint discovery anchor is `truealter.com`, see
  * `discover()` for the cascade. The default MCP wire endpoint is
  * `https://mcp.truealter.com/api/v1/mcp`; the bare host
  * `https://mcp.truealter.com` is the branded discovery surface and
@@ -106,7 +106,7 @@ export { generateGenericMcpConfig } from './adapters/generic-mcp.js';
 export type { McpServerConfig } from './adapters/generic-mcp.js';
 export type { ClaudeDesktopConfig, ClaudeDesktopServerConfig, GenerateClaudeDesktopOptions } from './adapters/claude-desktop.js';
 
-// Wire — auto-install ALTER into detected MCP clients
+// Wire, auto-install ALTER into detected MCP clients
 export {
   wire,
   unwire,
@@ -134,10 +134,10 @@ export {
   type WireTargetCli,
 } from './wire/index.js';
 
-// Types — re-export everything from the generated types module
+// Types, re-export everything from the generated types module
 export * from './types.js';
 
-// alter_homepage — wire format (shipped as `homepage`
+// alter_homepage, wire format (shipped as `homepage`
 // because `alter_portfolio` is taken by the attestations tool)
 export type {
   HomepageCallerVertical,
@@ -149,7 +149,7 @@ export type {
 } from './homepage.js';
 export { HOMEPAGE_LIMITS } from './homepage.js';
 
-// Theme packs — Wave 2 implementation
+// Theme packs (planned)
 export type {
   GreetingRegister,
   Osc8AllowedScheme,

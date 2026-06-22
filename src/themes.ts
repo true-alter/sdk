@@ -1,5 +1,5 @@
 /**
- * @truealter/sdk — theme pack types (Wave 2)
+ * @truealter/sdk theme pack types (planned)
  *
  * Wire-format types for ALTER theme packs and `themes.lock` composition
  * manifests. These types describe the on-the-wire shape of theme
@@ -43,13 +43,13 @@ export interface ThemeMeta {
   name: string;
   /** SemVer-shaped recommended; informational only. Resolution uses pack_id. */
   version: string;
-  /** MUST be a ~handle whose D-ID8 public key signs the pack. */
+  /** MUST be a ~handle whose identity-trailer public key signs the pack. */
   author: string;
   /** ≤ 240 characters after NFC. */
   description: string;
-  /** OPTIONAL — surfaced by curated resolvers; not rendered by ALTER. */
+  /** OPTIONAL, surfaced by curated resolvers; not rendered by ALTER. */
   repo?: string;
-  /** OPTIONAL — surfaced by curated resolvers; not rendered by ALTER. */
+  /** OPTIONAL, surfaced by curated resolvers; not rendered by ALTER. */
   docs_url?: string;
 }
 
@@ -89,7 +89,7 @@ export interface ThemeRenderHints {
 
 /** `[assets]` section. Paths MUST be repo-relative without `..` segments. */
 export interface ThemeAssets {
-  /** Optional — if omitted, no assets are loaded. */
+  /** Optional, if omitted, no assets are loaded. */
   glyphs?: readonly string[];
 }
 
@@ -150,8 +150,8 @@ export interface ThemeLockEntry {
 }
 
 /**
- * The user-side composition manifest. This is the publishable artefact
- * — what someone shares when they say "here is my ALTER".
+ * The user-side composition manifest. This is the publishable artefact,
+ * what someone shares when they say "here is my ALTER".
  *
  * Re-applying the same lockfile against the same renderer version MUST
  * produce a bit-identical render, modulo the `attunement_glyph` field
@@ -159,7 +159,7 @@ export interface ThemeLockEntry {
  */
 export interface ThemesLockV1 {
   schema_version: 1;
-  /** e.g. "alter-cli/0.5.0" — informational, not load-bearing. */
+  /** e.g. "alter-cli/0.5.0": informational, not essential. */
   generated_by: string;
   /** RFC 3339 UTC timestamp at lockfile-write time. */
   generated_at: string;
@@ -173,7 +173,7 @@ export interface ThemesLockV1 {
 }
 
 // =============================================================================
-// theme_share MCP tool (Wave 2)
+// theme_share MCP tool (planned)
 // =============================================================================
 
 /**
