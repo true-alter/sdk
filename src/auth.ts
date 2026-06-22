@@ -1,7 +1,7 @@
 /**
  * Ed25519 keypair management for ALTER Identity.
  *
- * Uses @noble/ed25519 — pure JavaScript, no native addons, runs in
+ * Uses @noble/ed25519, pure JavaScript, no native addons, runs in
  * Node 18+, Deno, Bun, Cloudflare Workers and the browser.
  *
  * Keys are stored as hex strings for portability. The CLI persists them

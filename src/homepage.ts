@@ -1,5 +1,5 @@
 /**
- * @truealter/sdk — alter_homepage MCP tool types
+ * @truealter/sdk, alter_homepage MCP tool types
  *
  * Wire-format types for the user-authored, externally-queryable identity
  * homepage surface.
@@ -28,7 +28,7 @@ export type HomepageFieldProvenance = "declared" | "derived" | "attested";
 /**
  * One field of a HomepageManifest. Every field carries its provenance
  * class so MCP consumers can render appropriately. The `value` shape is
- * field-specific — this is a discriminated parent; consumers should
+ * field-specific, this is a discriminated parent; consumers should
  * narrow on the manifest's field name, not on `value`'s runtime shape.
  */
 export interface HomepageField<T = unknown> {
@@ -46,7 +46,7 @@ export interface HomepageField<T = unknown> {
 /**
  * The wire-format manifest returned by `alter_homepage(handle)`.
  *
- * Fields are individually optional — a HomepageManifest with only a
+ * Fields are individually optional, a HomepageManifest with only a
  * handle and an opener is valid. MCP consumers MUST NOT assume any
  * field other than `handle` is present.
  */
@@ -71,7 +71,7 @@ export interface HomepageManifest {
 
   /**
    * Composed-glyph string from typed primitives. The sigil is a string
-   * of renderer-recognised primitive references — not raw glyph codes —
+   * of renderer-recognised primitive references, not raw glyph codes -
    * so different consumers can render the same sigil distinctly.
    * Provenance is `declared` for user-composed, `derived` for
    * sigil-from-thread-graph crystallisation.
@@ -100,7 +100,7 @@ export interface HomepageManifest {
   /**
    * Optional, opt-in per query context. Coarse Golden-Thread summary;
    * provenance is `derived`. MCP consumers MUST NOT request this field
-   * by default — only on explicit per-call consent. Consumers in the
+   * by default, only on explicit per-call consent. Consumers in the
    * workplace/education vertical MUST NOT request this field at all
    * (clause-4 caller-context gate).
    */
@@ -126,7 +126,7 @@ export interface HomepageInput {
   /**
    * Optional whitelist of field names. If omitted, the server returns
    * all fields the caller is permitted to read. Unknown field names
-   * are silently ignored (forward-compatible — adding a new field does
+   * are silently ignored (forward-compatible, adding a new field does
    * not break old consumers).
    */
   fields?: readonly (keyof HomepageManifest)[];

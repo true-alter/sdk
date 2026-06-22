@@ -94,7 +94,7 @@ describe('signInvocation', () => {
   });
 
   it('rejects iat well outside the ±60s window when compared server-side', () => {
-    // The signer itself doesn't reject stale iat — server enforces
+    // The signer itself doesn't reject stale iat, server enforces
     // that. But we can assert the signer respects the override so
     // stale-iat tests in the server suite are reproducible.
     const d = randomBytes(32);

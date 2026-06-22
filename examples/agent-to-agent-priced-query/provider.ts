@@ -1,19 +1,20 @@
 /**
- * provider.ts — runs as ~cc-sonnet-4-6 (Instrument-tier per D-ID8).
+ * provider.ts: runs as ~cc-sonnet-4-6 (Instrument-tier; carries the
+ * identity trailer naming the acting Sovereign and the drafting Instrument).
  *
  * Role:
  *   1. Advertise a priced MCP tool (`compute_belonging`) via
- *      `.well-known/alter.json` — the template that requester.ts
+ *      `.well-known/alter.json`, the template that requester.ts
  *      discovers using the SDK's `discover()` primitive.
  *   2. Accept an Accord handshake, countersign the envelope.
  *   3. On priced-query call:
  *        - emit a PaymentEnvelope (x402 quote, 402 response shape)
  *        - accept the settlement reference on the retry
  *        - execute a stub handler (hardcoded compute_belonging payload)
- *        - return a signed receipt carrying the D-ID8 trailer block
+ *        - return a signed receipt carrying the identity trailer block
  *          (`Acted-By: ~blake`, `Drafted-With: ~cc-sonnet-4-6`).
  *
- * This file is reference code — it exposes each step as a callable
+ * This file is reference code, it exposes each step as a callable
  * function so the requester can drive them in-process without an
  * HTTP server. A real provider deploys the same sequence behind
  * streamable-http MCP.
@@ -41,8 +42,8 @@ import { type Ed25519Keypair } from '../../src/auth.js';
 /**
  * `.well-known/alter.json` fragment the provider publishes so the
  * requester can resolve it with `discover()` from the SDK. Not served
- * over HTTP in this reference flow — the requester injects it directly
- * — but the shape is identical to production.
+ * over HTTP in this reference flow (the requester injects it directly),
+ * but the shape is identical to production.
  */
 export function buildAlterJson(env: ExampleEnv, keypair: Ed25519Keypair) {
   return {
@@ -78,7 +79,7 @@ export class Provider {
   }
 
   /**
-   * Step 2 — countersign the Accord.
+   * Step 2, countersign the Accord.
    *
    * The provider verifies the requester's signature against the
    * party entry already in the envelope, then appends its own.
@@ -107,7 +108,7 @@ export class Provider {
   }
 
   /**
-   * Step 3a — respond to a priced-query call with a 402-style envelope.
+   * Step 3a, respond to a priced-query call with a 402-style envelope.
    *
    * In production this is carried over HTTP 402 + `X-402-Payment`
    * header; the wire shape here matches `PaymentEnvelope` so the
@@ -132,7 +133,7 @@ export class Provider {
   }
 
   /**
-   * Step 3b — on receipt of a settlement reference, execute the tool
+   * Step 3b, on receipt of a settlement reference, execute the tool
    * and return a signed receipt.
    */
   async fulfil(
@@ -154,7 +155,7 @@ export class Provider {
     this.seenNonces.set(seenKey, now);
 
     // ── Stub handler ─────────────────────────────────────────────
-    // The tool under test is `compute_belonging` — in production it
+    // The tool under test is `compute_belonging`, in production it
     // returns a Belonging Probability vector keyed by role archetype.
     // For the reference flow we return a hardcoded payload. Note that
     // agent-to-agent L2 queries don't touch member data; this
@@ -172,8 +173,8 @@ export class Provider {
       },
     };
 
-    // D-CD1 split with D-RS8 org-attested adder illustrated. The
-    // `hasMember: false` branch is the pending-DR case — see
+    // Revenue split with the org-attested adder illustrated. The
+    // `hasMember: false` branch is the still-being-finalised case, see
     // README banner and shared.ts:computeSplit for the note string.
     const split = computeSplit({
       grossAmount: this.env.PRICED_QUERY_AMOUNT,
@@ -189,7 +190,7 @@ export class Provider {
       accord_id: request.accord_id,
       request_nonce: request.nonce,
       provider: this.handle,
-      // D-ID8 trailer block. Acted-By is the Sovereign, Drafted-With
+      // Identity trailer block. Acted-By is the Sovereign, Drafted-With
       // is the Instrument. GitHub Co-Authored-By compatibility trailer
       // is omitted from the on-wire receipt (only relevant for git
       // commits), but would be appended when this receipt is archived
@@ -209,7 +210,7 @@ export class Provider {
         facilitator_bps: split.facilitator_bps,
         alter_bps: split.alter_bps,
         cooperative_bps: split.cooperative_bps,
-        alter_bps: split.alter_bps,
+        org_alter_bps: split.org_alter_bps,
         notes: split.notes,
       },
       issued_at: issuedAt,
@@ -223,7 +224,7 @@ export class Provider {
   revokeAccord(accord_id: string, reason: string): void {
     this.activeAccords.delete(accord_id);
     // TODO(sdk): production would also emit a signed RevocationReceipt
-    // to the requester — the SDK doesn't have a primitive for that yet.
+    // to the requester, the SDK doesn't have a primitive for that yet.
     void reason;
   }
 }

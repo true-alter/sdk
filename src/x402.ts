@@ -38,7 +38,7 @@ export interface X402ClientOptions {
   signer?: X402Signer;
   /**
    * Maximum amount the client will spend per query, in the asset's display
-   * unit (e.g. `"0.50"` for fifty cents USDC). Hard cap — quotes above this
+   * unit (e.g. `"0.50"` for fifty cents USDC). Hard cap, quotes above this
    * are rejected even if a signer is configured.
    */
   maxPerQuery?: string;
@@ -89,7 +89,7 @@ export class X402Client {
       }
     }
     if (!this.signer) {
-      // No signer — re-raise so the caller can handle settlement themselves.
+      // No signer, re-raise so the caller can handle settlement themselves.
       throw new AlterPaymentRequired(envelope.resource ?? 'unknown', envelope);
     }
     return this.signer.settle(envelope);
@@ -112,7 +112,7 @@ export class X402Client {
 
 /**
  * Parse an `X-402-Payment` response header into a {@link PaymentEnvelope}.
- * The header value is JSON or a key=value list — we handle both.
+ * The header value is JSON or a key=value list, we handle both.
  */
 export function parsePaymentHeader(header: string): PaymentEnvelope | null {
   try {

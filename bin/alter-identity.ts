@@ -7,7 +7,7 @@
  *   alter-identity status               show connection state and cached identity
  *   alter-identity config [--claude|--cursor|--generic]   print MCP config snippet
  *
- * Pure Node — uses `node:fs`, `node:path`, `node:os`. The CLI is the
+ * Pure Node, uses `node:fs`, `node:path`, `node:os`. The CLI is the
  * one place we are allowed to depend on Node-only APIs.
  */
 
@@ -158,7 +158,7 @@ async function runInit(args: string[]): Promise<void> {
     const probes = probeAll();
     const found = probes.filter((p) => p.installed).map((p) => p.client.label);
     if (found.length === 0) {
-      stdout.write('\nNo MCP-aware clients detected on this machine — skipping wire.\n');
+      stdout.write('\nNo MCP-aware clients detected on this machine, skipping wire.\n');
     } else {
       stdout.write(`\nDetected MCP-aware clients: ${found.join(', ')}\n`);
       shouldWire = await confirm('Wire detected AI clients to ALTER?', true);
@@ -195,7 +195,7 @@ async function runVerify(args: string[]): Promise<void> {
 async function runStatus(): Promise<void> {
   const cfg = readConfig();
   if (!cfg) {
-    stdout.write(`not initialised — run \`alter-identity init\`\n`);
+    stdout.write(`not initialised, run \`alter-identity init\`\n`);
     return;
   }
   stdout.write(`config:        ${CONFIG_PATH}\n`);
@@ -212,9 +212,9 @@ async function runStatus(): Promise<void> {
   try {
     const stats = await client.getNetworkStats();
     const text = stats.content?.[0]?.text ?? JSON.stringify(stats.data ?? '');
-    stdout.write(`network probe: ok — ${text.slice(0, 120)}\n`);
+    stdout.write(`network probe: ok, ${text.slice(0, 120)}\n`);
   } catch (err) {
-    stdout.write(`network probe: failed — ${(err as Error).message}\n`);
+    stdout.write(`network probe: failed, ${(err as Error).message}\n`);
   }
 }
 
@@ -238,7 +238,7 @@ async function runWire(args: string[]): Promise<void> {
 
   const cfg = readConfig() ?? {};
   if (!cfg.endpoint) {
-    stderr.write('error: no endpoint — run `alter-identity init` first\n');
+    stderr.write('error: no endpoint, run `alter-identity init` first\n');
     exit(2);
   }
 
@@ -272,13 +272,13 @@ function printWireReport(report: WireReport): void {
     switch (target.status) {
       case 'written':
         if (target.method === 'file') {
-          stdout.write(`  ✓ ${tag} wrote ${target.path} (backup: ${target.backupPath ?? '(none — created new file)'})\n`);
+          stdout.write(`  ✓ ${tag} wrote ${target.path} (backup: ${target.backupPath ?? '(none, created new file)'})\n`);
         } else {
           stdout.write(`  ✓ ${tag} registered via \`${target.command}\`\n`);
         }
         break;
       case 'already-wired':
-        stdout.write(`  · ${tag} already wired — no change\n`);
+        stdout.write(`  · ${tag} already wired, no change\n`);
         break;
       case 'skipped':
         stdout.write(`  - ${tag} skipped (${target.reason ?? 'not installed'})\n`);
@@ -294,11 +294,11 @@ function printWireReport(report: WireReport): void {
 
 function printUnwireReport(report: UnwireReport): void {
   if (!report.state) {
-    stdout.write('nothing to unwire — no wire-state.json found\n');
+    stdout.write('nothing to unwire, no wire-state.json found\n');
     return;
   }
   if (report.state.targets.length === 0) {
-    stdout.write('wire-state.json is empty — nothing to unwire\n');
+    stdout.write('wire-state.json is empty, nothing to unwire\n');
     return;
   }
   for (const entry of report.undone) {

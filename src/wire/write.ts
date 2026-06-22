@@ -13,7 +13,7 @@
  * Windows note: `fs.renameSync` across an existing file used to fail
  * on older Node builds; modern Node (≥ 16) handles this correctly on
  * NTFS, so no special-case is needed. We still keep all operations
- * synchronous — the CLI path is strictly sequential and the tiny
+ * synchronous, the CLI path is strictly sequential and the tiny
  * blocking cost buys determinism.
  */
 
@@ -126,7 +126,7 @@ export function atomicJsonMerge(opts: AtomicMergeOptions): WriteResult {
 
 /**
  * Restore a target from its backup sibling. If `backupPath` is null
- * the target was created by our write step — in that case we unlink
+ * the target was created by our write step, in that case we unlink
  * the file to restore the original "did not exist" state.
  */
 export function restoreFromBackup(path: string, backupPath: string | null): void {

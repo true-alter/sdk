@@ -1,5 +1,5 @@
 /**
- * AlterClient — high-level typed wrapper around the ALTER MCP server.
+ * AlterClient, high-level typed wrapper around the ALTER MCP server.
  *
  * This is the entry point most consumers will use. It bundles
  * {@link MCPClient}, {@link X402Client}, discovery, and provenance
@@ -74,7 +74,7 @@ export interface AlterClientOptions extends Omit<MCPClientOptions, 'x402'> {
    * to `https://api.truealter.com/.well-known/alter-keys.json`.
    *
    * When set, this URL is used verbatim for every `verifyProvenance`
-   * call and *overrides* any `verify_at` hint on the server response —
+   * call and *overrides* any `verify_at` hint on the server response -
    * the caller has already vouched for this origin. Must be `https:`.
    */
   jwksUrl?: string;
@@ -82,7 +82,7 @@ export interface AlterClientOptions extends Omit<MCPClientOptions, 'x402'> {
    * Hostname allowlist applied when resolving an untrusted `verify_at`
    * field on a provenance envelope. Defaults to
    * {@link DEFAULT_VERIFY_AT_ALLOWLIST} (`api.truealter.com`,
-   * `mcp.truealter.com`). Passing a list here *replaces* the default —
+   * `mcp.truealter.com`). Passing a list here *replaces* the default -
    * include the ALTER canonicals if you still want them accepted.
    *
    * A hostile MCP server can otherwise point `verify_at` at an
@@ -109,7 +109,7 @@ export class AlterClient {
 
   /**
    * Resolve the MCP endpoint via discovery if requested. Safe to call
-   * multiple times — the first successful lookup is cached.
+   * multiple times, the first successful lookup is cached.
    */
   async discoverEndpoint(): Promise<DiscoveryResult> {
     if (this.discovered) return this.discovered;
@@ -123,7 +123,7 @@ export class AlterClient {
   }
 
   /**
-   * Initialise the MCP session. Optional — every method calls
+   * Initialise the MCP session. Optional, every method calls
    * `mcp.initialize()` lazily, but you can call this once at startup if
    * you want fail-fast behaviour.
    */
@@ -133,7 +133,7 @@ export class AlterClient {
 
   // ── Free tier ────────────────────────────────────────────────────────
 
-  /** First handshake — confirms the connection, returns trust tier and tool counts. */
+  /** First handshake, confirms the connection, returns trust tier and tool counts. */
   async helloAgent(): Promise<MCPCallToolResult> {
     return this.mcp.callTool('hello_agent', {});
   }
@@ -150,7 +150,7 @@ export class AlterClient {
     const args: VerifyIdentityInput = handleOrId.includes('@')
       ? { member_id: '', email: handleOrId }
       : handleOrId.startsWith('~')
-        ? // ~handle — server resolves these via the member_id field
+        ? // ~handle, server resolves these via the member_id field
           { member_id: handleOrId }
         : { member_id: handleOrId };
     if (claims) args.claims = claims;
@@ -290,9 +290,9 @@ export class AlterClient {
   }
 
   // ── Alter-to-Alter Messaging ─────────────────────────────────────────
-  // Wave 1: cross-handle direct messages between authenticated tilde
-  // handles. Default closed — recipient must have granted the sender via
-  // alter_message_grant. Spec: docs/technical/Alter-to-Alter Messaging.md.
+  // Cross-handle direct messages between authenticated tilde handles.
+  // Default closed, recipient must have granted the sender via
+  // alter_message_grant.
 
   /** Send a direct message to another tilde handle. */
   async messageSend(args: {
@@ -344,7 +344,7 @@ export class AlterClient {
   /**
    * Verify the ES256 provenance attestation on a tool response.
    * Accepts either a {@link ProvenanceEnvelope} or the raw `_meta`
-   * object — the latter is more convenient for ad-hoc verification.
+   * object, the latter is more convenient for ad-hoc verification.
    */
   async verifyProvenance(
     envelope: ProvenanceEnvelope | { provenance?: ProvenanceEnvelope } | undefined | null,

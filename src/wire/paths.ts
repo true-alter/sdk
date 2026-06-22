@@ -71,7 +71,7 @@ const cursorConfigPath = join(cursorDir, 'mcp.json');
 
 // Claude Code stores MCP servers through its own CLI (`claude mcp add`).
 // The effective state lives in ~/.claude.json, but the CLI owns write
-// ordering and legacy format migration — we do not touch that file
+// ordering and legacy format migration, we do not touch that file
 // directly.
 const claudeCodeProbeDir = join(HOME, '.claude');
 

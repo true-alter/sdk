@@ -3,10 +3,10 @@
  *
  * The MCP spec (revision 2025-11-25) defines a request/response protocol
  * over HTTP POST with optional `Mcp-Session-Id` correlation. This module
- * is the thin transport — see {@link AlterClient} for the typed wrapper
+ * is the thin transport, see {@link AlterClient} for the typed wrapper
  * around ALTER's tool surface.
  *
- * Pure native `fetch()` — no axios, no node-fetch, no ws.
+ * Pure native `fetch()`, no axios, no node-fetch, no ws.
  */
 
 import {
@@ -56,12 +56,10 @@ export interface MCPClientOptions {
   signing?: MCPSigningOptions;
   /**
    * Extra HTTP headers added to every request. Useful when the endpoint
-   * sits behind an edge gate that requires its own credentials —
-   * e.g. Cloudflare Access service tokens (`CF-Access-Client-Id` +
-   * `CF-Access-Client-Secret`). Protocol-level headers (`Content-Type`,
-   * `Accept`) and ALTER-internal headers (`X-ALTER-API-Key`,
-   * `Mcp-Session-Id`, `Mcp-Invocation-Signature`) always win over
-   * collisions here.
+   * sits behind an additional gate that requires its own credentials.
+   * Protocol-level headers (`Content-Type`, `Accept`) and ALTER-internal
+   * headers (`X-ALTER-API-Key`, `Mcp-Session-Id`,
+   * `Mcp-Invocation-Signature`) always win over collisions here.
    */
   extraHeaders?: Record<string, string>;
 }
@@ -106,7 +104,7 @@ export interface MCPContentBlock {
 export interface MCPCallToolResult<T = unknown> {
   content: MCPContentBlock[];
   isError?: boolean;
-  /** Parsed structured payload — set when content[0].type === 'json' or text parses as JSON. */
+  /** Parsed structured payload, set when content[0].type === 'json' or text parses as JSON. */
   data?: T;
   _meta?: {
     provenance?: import('./provenance.js').ProvenanceEnvelope;
@@ -145,7 +143,7 @@ export class MCPClient {
 
   /**
    * Send the MCP `initialize` handshake and capture the resulting session
-   * id. Idempotent — safe to call multiple times.
+   * id. Idempotent, safe to call multiple times.
    */
   async initialize(): Promise<unknown> {
     if (this.initialised) return null;
@@ -246,7 +244,7 @@ export class MCPClient {
     };
     if (params !== undefined) payload.params = params;
 
-    // Q5c — sign `tools/call` when a signing key is configured. Built
+    // Q5c, sign `tools/call` when a signing key is configured. Built
     // before the retry loop so a single invocation reuses the same
     // nonce/iat pair across transient-retry attempts. Server Redis
     // replay defence accepts only one successful verification per

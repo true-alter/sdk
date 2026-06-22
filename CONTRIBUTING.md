@@ -8,7 +8,7 @@ This repository is the **public source mirror** of the SDK that ships on npm as 
 - **Tests:** `tests/` (vitest)
 - **Binaries:** `bin/` (`alter-identity`, `alter-mcp-bridge`)
 - **Examples:** `examples/`
-- **CI:** `.github/workflows/ci.yml` — typecheck, vitest, build
+- **CI:** `.github/workflows/ci.yml`, typecheck, vitest, build
 
 ```bash
 git clone https://github.com/true-alter/alter-identity.git
@@ -25,12 +25,12 @@ npm run build
 
 - The method you called, the arguments you passed (redact real identifiers where relevant), and the SDK version.
 - The error message or unexpected behaviour, ideally with a minimal reproduction script.
-- Whether the same call reproduces against the live MCP endpoint (`https://mcp.truealter.com`) via `curl` — helps us distinguish SDK bug from server bug.
+- Whether the same call reproduces against the live MCP endpoint (`https://mcp.truealter.com`) via `curl`, helps us distinguish SDK bug from server bug.
 - Node / Deno / Bun / runtime version.
 
 ## Small patches welcome
 
-Typo fixes, README clarifications, tightened error messages, extra test coverage, better TypeScript types: open a PR against `main`. Keep each PR focused on one concern — the monorepo sync is cleaner that way.
+Typo fixes, README clarifications, tightened error messages, extra test coverage, better TypeScript types: open a PR against `main`. Keep each PR focused on one concern, the monorepo sync is cleaner that way.
 
 ## Larger design changes
 
@@ -40,7 +40,7 @@ Specific asks that come up often:
 
 - **Adding a new tool to the typed surface.** The server has to ship the tool first. If you're looking at an undocumented tool, that's almost always a sign the SDK is ahead of the server. File an issue against the live MCP server rather than a PR here.
 - **Swapping the crypto backend.** `@noble/ed25519` + `@noble/hashes` was chosen deliberately for a zero-deps-beyond-noble surface. Pull requests replacing them with larger toolkits (jose, etc.) will be declined unless there's a concrete protocol reason.
-- **Wallet integration.** The SDK is explicitly wallet-agnostic — `X402Signer` is the seam. Don't ship a viem/ethers dependency from here.
+- **Wallet integration.** The SDK is explicitly wallet-agnostic, `X402Signer` is the seam. Don't ship a viem/ethers dependency from here.
 
 ## Style
 
@@ -51,7 +51,7 @@ Specific asks that come up often:
 
 ## Tests
 
-Every non-trivial change needs a test. Provenance, discovery, x402, and auth have dedicated test files — extend the nearest match. `tests/` is wired to vitest; `npm test` runs the whole suite.
+Every non-trivial change needs a test. Provenance, discovery, x402, and auth have dedicated test files, extend the nearest match. `tests/` is wired to vitest; `npm test` runs the whole suite.
 
 ## Security issues
 

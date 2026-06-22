@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * alter-mcp-bridge — stdio ↔ Streamable-HTTP MCP bridge powered by @truealter/sdk.
+ * alter-mcp-bridge, stdio ↔ Streamable-HTTP MCP bridge powered by @truealter/sdk.
  *
  * Claude Code, Cursor, and most desktop MCP hosts speak the stdio
  * transport. The live ALTER MCP server speaks Streamable HTTP. This
@@ -11,7 +11,7 @@
  *
  *   1. We get session id capture, retry, 402 detection, and provenance
  *      verification for free.
- *   2. Every call exercises @truealter/sdk end-to-end — if the bridge
+ *   2. Every call exercises @truealter/sdk end-to-end, if the bridge
  *      works, the SDK works.
  *   3. We can attach an X402 signer here later and the bridge will
  *      transparently settle premium tool calls.
@@ -31,20 +31,12 @@ const ENDPOINT =
   env.ALTER_MCP_ENDPOINT ?? 'https://mcp.truealter.com/api/v1/mcp';
 const API_KEY = env.ALTER_API_KEY ?? undefined;
 
-// Extra HTTP headers, useful when the endpoint sits behind a Cloudflare
-// Access edge gate. Two paths:
-//
-//   1. ALTER_BRIDGE_HEADERS — JSON object, full escape hatch.
-//   2. CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET — convenience for
-//      the common CF Access service-token pattern.
-//
-// (1) wins over (2) on collision.
+// Extra HTTP headers, useful when the endpoint sits behind an
+// additional gate that needs its own credentials. Set
+// ALTER_BRIDGE_HEADERS to a JSON object of header name/value pairs and
+// each entry is added to every request.
 function buildExtraHeaders(): Record<string, string> | undefined {
   const headers: Record<string, string> = {};
-  if (env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET) {
-    headers['CF-Access-Client-Id'] = env.CF_ACCESS_CLIENT_ID;
-    headers['CF-Access-Client-Secret'] = env.CF_ACCESS_CLIENT_SECRET;
-  }
   if (env.ALTER_BRIDGE_HEADERS) {
     try {
       const parsed = JSON.parse(env.ALTER_BRIDGE_HEADERS) as Record<string, string>;
@@ -60,13 +52,13 @@ function buildExtraHeaders(): Record<string, string> | undefined {
 
 const EXTRA_HEADERS = buildExtraHeaders();
 
-// LB-4 (2026-04-23): dev-only bridge posture at launch.
+// Dev-only bridge posture.
 // Emit a one-shot advisory to stderr so MCP hosts, demo users, and CI logs
 // can see the scope boundary. stdout is the JSON-RPC wire on stdio bridges
-// and must NOT be written to here — `console.warn` in Node writes to stderr
+// and must NOT be written to here; `console.warn` in Node writes to stderr
 // by design, so the JSON-RPC channel stays clean.
 console.warn(
-  'This bridge is a dev/demo surface. Authenticated MCP tools require Q5c signing; for production, import `@truealter/sdk` directly. Bridge signing lands in Wave-2.',
+  'This bridge is a dev/demo surface. Authenticated MCP tools require per-invocation signing; for production, import `@truealter/sdk` directly. Bridge signing is on the roadmap.',
 );
 
 const client = new MCPClient({
@@ -131,7 +123,7 @@ async function handle(req: JsonRpcRequest): Promise<JsonRpcResponse> {
         result = await client.rpc(req.method, (req.params as Record<string, unknown>) ?? {});
         break;
       default:
-        // Forward anything we don't recognise — the upstream server can
+        // Forward anything we don't recognise, the upstream server can
         // accept or reject it. This keeps the bridge protocol-version
         // independent.
         result = await client.rpc(req.method, (req.params as Record<string, unknown>) ?? {});

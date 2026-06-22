@@ -144,7 +144,7 @@ describe('verifyToolSignatures', () => {
   });
 });
 
-describe('resolveVerifyAt — hostname allowlist (C-4 defence)', () => {
+describe('resolveVerifyAt, hostname allowlist (C-4 defence)', () => {
   it('rejects attacker hostnames not on the allowlist', () => {
     expect(() => resolveVerifyAt('https://evil.example.com/.well-known/keys.json')).toThrow(
       /not on the verify_at allowlist/,
@@ -210,7 +210,7 @@ describe('resolveVerifyAt — hostname allowlist (C-4 defence)', () => {
   });
 });
 
-describe('fetchJwks — body-size cap and cache bounds (sdk/H-2 + M-2)', () => {
+describe('fetchJwks, body-size cap and cache bounds (sdk/H-2 + M-2)', () => {
   async function buildValidEnvelope(): Promise<{
     token: string;
     jwks: { keys: unknown[] };
@@ -255,7 +255,7 @@ describe('fetchJwks — body-size cap and cache bounds (sdk/H-2 + M-2)', () => {
 
   it('rejects oversize JWKS body when Content-Length is absent', async () => {
     const { envelope } = await buildValidEnvelope();
-    // Pad to ~96KB of padding bytes around a plausible keys array — no
+    // Pad to ~96KB of padding bytes around a plausible keys array, no
     // Content-Length header set so the text-length fallback must catch it.
     const huge = JSON.stringify({ keys: [], pad: 'x'.repeat(96 * 1024) });
     const fetchImpl: typeof fetch = (async () =>
@@ -267,7 +267,7 @@ describe('fetchJwks — body-size cap and cache bounds (sdk/H-2 + M-2)', () => {
   });
 });
 
-describe('verifyProvenance — allowlist integration', () => {
+describe('verifyProvenance, allowlist integration', () => {
   async function buildEnvelope(
     verifyAt: string | undefined,
   ): Promise<{ token: string; jwks: { keys: unknown[] }; envelope: Record<string, unknown> }> {
@@ -349,7 +349,7 @@ describe('verifyProvenance — allowlist integration', () => {
 
   it('(e) caller-passed jwksUrl overrides a hostile verify_at', async () => {
     // Envelope points at the attacker, but the caller has pinned their
-    // own JWKS URL — the pinned URL wins and the attacker hostname is
+    // own JWKS URL, the pinned URL wins and the attacker hostname is
     // never consulted.
     const { envelope, jwks } = await buildEnvelope(
       'https://evil.example.com/.well-known/keys.json',

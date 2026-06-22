@@ -4,7 +4,7 @@
  * Writing MCP config under iCloud / OneDrive / Dropbox / Google Drive
  * silently propagates the same `mcpServers.alter` entry (and API key
  * headers) to every other device the user syncs. That is a consent
- * violation — wire consent is per-device.
+ * violation, wire consent is per-device.
  *
  * The check is a prefix match against the resolved absolute path; it
  * is deliberately broader than strictly necessary so that users who
@@ -16,7 +16,7 @@ import { platform } from 'node:os';
 import { resolve } from 'node:path';
 
 const SYNC_PREFIXES = [
-  // iCloud Drive — both the new and legacy mounts.
+  // iCloud Drive, both the new and legacy mounts.
   'Library/Mobile Documents/com~apple~CloudDocs',
   'iCloud Drive',
   // OneDrive variants Microsoft ships across editions.
@@ -29,7 +29,7 @@ const SYNC_PREFIXES = [
   'Google Drive',
   'GoogleDrive',
   'CloudStorage/GoogleDrive',
-  // Box, pCloud, Sync.com, MEGA — high-signal names worth refusing.
+  // Box, pCloud, Sync.com, MEGA, high-signal names worth refusing.
   'Box Sync',
   'pCloud Drive',
   'Sync.com',
@@ -49,7 +49,7 @@ export interface SyncedVolumeHit {
  */
 export function detectSyncedVolume(path: string): SyncedVolumeHit | null {
   const absolute = resolve(path);
-  // Normalise separators for prefix checking only — we never write this
+  // Normalise separators for prefix checking only, we never write this
   // transformed string back to disk.
   const normalised = platform() === 'win32' ? absolute.replace(/\\/g, '/') : absolute;
   for (const prefix of SYNC_PREFIXES) {

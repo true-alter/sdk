@@ -3,12 +3,12 @@
  *
  * The server-side Q5c gate (hard-required from 2026-04-20) demands
  * every authenticated `tools/call` carries an `Mcp-Invocation-Signature`
- * header — a compact JWS (header.payload.signature) signed ES256
+ * header, a compact JWS (header.payload.signature) signed ES256
  * (ECDSA on P-256 + SHA-256) by a private key whose public half has
  * been pre-registered via `POST /api/v1/agents/keys`.
  *
  * This module produces the header. The wire-format contract MUST
- * match `backend/app/mcp/invocation_signing.py` byte-for-byte —
+ * match `backend/app/mcp/invocation_signing.py` byte-for-byte -
  * particularly the canonical JSON encoding of `tool_args` and the
  * header + claim shape.
  */
@@ -18,7 +18,7 @@ import { randomBytes } from '@noble/hashes/utils';
 import { createPrivateKey } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
-// Canonical JSON — mirrors backend/app/mcp/invocation_signing.py.
+// Canonical JSON, mirrors backend/app/mcp/invocation_signing.py.
 // ---------------------------------------------------------------------------
 
 /**
@@ -28,7 +28,7 @@ import { createPrivateKey } from 'node:crypto';
  * Rules:
  *   - object keys are sorted ascending by codepoint
  *   - no whitespace
- *   - `ensure_ascii=False` — non-ASCII characters pass through verbatim
+ *   - `ensure_ascii=False`, non-ASCII characters pass through verbatim
  *     (not re-encoded as \\uXXXX). UTF-8 encoding happens at the byte
  *     layer before hashing.
  *
@@ -74,7 +74,7 @@ function stringifyInner(value: unknown): string {
  *
  * Python escapes the control set (U+0000..U+001F), the double-quote,
  * and the backslash. Anything else passes through verbatim. Node's
- * built-in `JSON.stringify` does the same — we reuse it.
+ * built-in `JSON.stringify` does the same, we reuse it.
  */
 function encodeString(s: string): string {
   return JSON.stringify(s);
@@ -164,7 +164,7 @@ function base64urlDecodeToBytes(s: string): Uint8Array {
 // ---------------------------------------------------------------------------
 
 export interface InvocationClaims {
-  /** Tool name — must equal the `tools/call` `params.name`. */
+  /** Tool name, must equal the `tools/call` `params.name`. */
   tool: string;
   /** Hex SHA-256 of canonical-JSON `tool_args`. */
   args_sha256: string;

@@ -7,7 +7,7 @@
  * structured report. `unwire()` reads that artefact and reverses
  * every target.
  *
- * Synchronous throughout — the CLI path is sequential and the
+ * Synchronous throughout, the CLI path is sequential and the
  * deterministic ordering is worth the tiny blocking cost.
  */
 
@@ -117,7 +117,7 @@ function wireFileTarget(args: {
   if (sync) {
     throw new Error(
       `refusing to wire ${client.label}: config path ${sync.resolvedPath} lives under ${sync.matchedPrefix}. ` +
-        'Synced volumes propagate credentials across devices — move the config off the sync root, or run wire on the device you want to target.',
+        'Synced volumes propagate credentials across devices, move the config off the sync root, or run wire on the device you want to target.',
     );
   }
 

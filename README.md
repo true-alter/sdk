@@ -1,8 +1,8 @@
-> **DEPRECATED READ-ONLY MIRROR.** This repository (`true-alter/alter-identity`) is a deprecated, structurally non-publishable mirror. The canonical `@truealter/sdk` is built and published from the ALTER monorepo. This repo is `"private": true` — it cannot be published to npm and must not be. Do not open PRs expecting upstream sync; file issues against the monorepo instead.
+> **Public source mirror of `@truealter/sdk`.** The package is built and published from the ALTER platform; this repository is the public reference for the SDK source. File issues here or against the platform. Pull requests are welcome and are back-ported on each tagged release.
 
 # @truealter/sdk
 
-ALTER Identity SDK - query the continuous identity field from any JavaScript/TypeScript environment.
+ALTER Identity SDK. Query the continuous identity field from any JavaScript or TypeScript environment.
 
 [![npm version](https://img.shields.io/npm/v/@truealter/sdk.svg)](https://www.npmjs.com/package/@truealter/sdk)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
@@ -12,7 +12,7 @@ ALTER Identity SDK - query the continuous identity field from any JavaScript/Typ
 [![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/alter-identity)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/alter-identity)
 
 > **Install:** `npm install @truealter/sdk`
-> **Publish channel:** this repository is the public source mirror of the SDK that ships as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk) on npm. The canonical build + publish flow lives in ALTER's monorepo — PRs and issues are welcome here; upstream sync happens on each tagged release.
+> **Publish channel:** this repository is the public source mirror of the SDK that ships as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk) on npm. The canonical build and publish flow lives in ALTER's monorepo; PRs and issues are welcome here, and upstream sync happens on each tagged release.
 
 A thin client over the ALTER MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spec `2025-11-25`) with x402 micropayment support, ES256 provenance verification, and config generators for Claude Code, Cursor, and generic MCP clients.
 
@@ -41,9 +41,9 @@ handshake, `tools/list`, and L0 tool calls, but it does not carry Q5c
 per-invocation signing - authenticated MCP tools will fail at the server
 edge when reached through the bridge. For production use, import
 `@truealter/sdk` directly and construct an `MCPClient` / `AlterClient` with
-the optional `signing` parameter; that path is the load-bearing one and
-carries the provenance envelope end-to-end. Bridge signing lands in Wave-2
-alongside the CLI wallet/consent verbs.
+the optional `signing` parameter; that path is the essential one and
+carries the provenance envelope end-to-end. Bridge signing is on the
+roadmap alongside the CLI wallet/consent verbs.
 
 ## CLI
 
@@ -213,7 +213,7 @@ const response = await mcp.callTool("verify_identity", {
 
 ## MCP Config Generation
 
-The SDK ships config generators for the major MCP-aware clients. Each emits a JSON snippet you can paste (or write directly) into the appropriate file.
+The SDK ships config generators for the major MCP-aware clients. Each emits a JSON snippet you can drop into (or write directly to) the appropriate file.
 
 ### Claude Code (`.mcp.json`)
 
@@ -464,7 +464,7 @@ Until then, use `endpoint: "https://mcp.truealter.com/api/v1/mcp"` (the default)
 
 ## Docker
 
-A `Dockerfile` is supplied for container-based consumers — primarily so the SDK binaries (`alter-identity`, `alter-mcp-bridge`) can be published to the Glama server-tier listing. For library usage you almost certainly want `npm install @truealter/sdk` directly, not the container.
+A `Dockerfile` is supplied for container-based consumers, primarily so the SDK binaries (`alter-identity`, `alter-mcp-bridge`) can be published to the Glama server-tier listing. For library usage you almost certainly want `npm install @truealter/sdk` directly, not the container.
 
 ```bash
 docker build -t alter-identity .
@@ -473,11 +473,11 @@ docker run --rm alter-identity alter-identity verify ~truealter
 
 ## Contributing
 
-Bug reports and small patches welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md). This repository is a public source mirror; the canonical build lives in ALTER's monorepo, and merged PRs are back-ported on each tagged release.
+Bug reports and small patches welcome: see [CONTRIBUTING.md](./CONTRIBUTING.md). This repository is a public source mirror; the canonical build lives in ALTER's monorepo, and merged PRs are back-ported on each tagged release.
 
 ## Security
 
-Report vulnerabilities to **security@truealter.com** — see [SECURITY.md](./SECURITY.md) for scope and the coordinated disclosure policy. Please do not open public issues for security bugs.
+Report vulnerabilities to **security@truealter.com**: see [SECURITY.md](./SECURITY.md) for scope and the coordinated disclosure policy. Please do not open public issues for security bugs.
 
 ## License
 

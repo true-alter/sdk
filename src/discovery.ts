@@ -18,7 +18,7 @@ import { AlterDiscoveryError, AlterNetworkError } from './errors.js';
 export interface DiscoveryResult {
   /** Resolved MCP endpoint URL. */
   url: string;
-  /** MCP transport — currently always `streamable-http`. */
+  /** MCP transport, currently always `streamable-http`. */
   transport: 'streamable-http';
   /** Source of the discovery hit, useful for diagnostics. */
   source: 'dns' | 'mcp.json' | 'alter.json' | 'override';
@@ -127,7 +127,7 @@ function normaliseDomain(input: string): string {
  * accepting it as an MCP endpoint. sdk/W-4 pentest 2026-04-17.
  *
  * - Requires `https:` (rejects `http:` and any non-https scheme).
- * - Rejects `user:pass@host` — Basic-auth credentials in a discovery doc
+ * - Rejects `user:pass@host`, Basic-auth credentials in a discovery doc
  *   would leak to whatever host sits behind them.
  * - Requires a non-empty hostname.
  *
@@ -208,7 +208,7 @@ async function tryWellKnown(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let resp: Response;
   try {
-    // `redirect: "manual"` — the URL is constructed from caller-supplied
+    // `redirect: "manual"`, the URL is constructed from caller-supplied
     // domain input; a 3xx to an attacker-controlled origin would silently
     // hand that origin's JSON (including `pk`/`x402`/`cap`) to the SDK as
     // authoritative discovery data. Any redirect is rejected explicitly below.
@@ -247,7 +247,7 @@ async function tryWellKnown(
     return { url: parsed.toString().replace(/\/$/, ''), transport: 'streamable-http', source: 'mcp.json', raw: doc };
   }
 
-  // alter.json — { v, mcp, pk, x402, cap, ... }
+  // alter.json, { v, mcp, pk, x402, cap, ... }
   const mcpHost = doc.mcp as string | undefined;
   if (!mcpHost) return null;
   const normalised = ensureMcpPath(mcpHost);
@@ -267,7 +267,7 @@ async function tryWellKnown(
  * `.well-known/alter.json` carries the bare branded host
  * (`https://mcp.truealter.com`) but the actual JSON-RPC endpoint lives
  * at `/api/v1/mcp`. If the discovered URL has no path component, append
- * it. URLs that already include a path are left alone — newer descriptors
+ * it. URLs that already include a path are left alone, newer descriptors
  * may move the endpoint.
  */
 function ensureMcpPath(url: string): string {

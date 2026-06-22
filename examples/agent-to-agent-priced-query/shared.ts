@@ -26,7 +26,7 @@ import type { PaymentEnvelope } from '../../src/errors.js';
 
 // TODO(sdk): the SDK should ship a tiny `loadEnv()` helper so examples
 // and CLIs don't each reimplement dotenv. For now, inline a 20-line
-// parser — no new dependency.
+// parser, no new dependency.
 export interface ExampleEnv {
   MAINNET: boolean;
   I_UNDERSTAND_THIS_WILL_SPEND_REAL_USDC: boolean;
@@ -48,7 +48,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function loadEnv(): ExampleEnv {
   // Prefer .env if present, otherwise fall back to env.example (checked
-  // in as a template — safe because it contains no secrets, only paths).
+  // in as a template, safe because it contains no secrets, only paths).
   const members = ['.env', 'env.example'];
   const raw: Record<string, string> = { ...process.env } as Record<string, string>;
   for (const name of members) {
@@ -84,7 +84,7 @@ export function loadEnv(): ExampleEnv {
   };
 
   // Fail loudly if someone tries to route to mainnet without the
-  // explicit acknowledgement flag. This is a belt-and-braces check —
+  // explicit acknowledgement flag. This is a belt-and-braces check -
   // the reference flow never actually broadcasts.
   if (env.MAINNET && !env.I_UNDERSTAND_THIS_WILL_SPEND_REAL_USDC) {
     throw new Error(
@@ -101,7 +101,7 @@ export function loadOrCreateKeypair(path: string): Ed25519Keypair {
     const hex = readFileSync(abs, 'utf8').trim();
     return keypairFromPrivateKey(hex);
   }
-  // No key on disk — generate an ephemeral one in memory. The example
+  // No key on disk, generate an ephemeral one in memory. The example
   // deliberately does not persist it: real deployments must manage
   // keys via the runtime's secure store, never via example code.
   return generateKeypair();
@@ -174,7 +174,7 @@ export async function verifyAccordSignature(
  * deterministic synthetic settlement reference so the provider can
  * "verify" it in the reference flow without a facilitator.
  *
- * TODO(sdk): the SDK currently lacks a canonical mock signer — x402.ts
+ * TODO(sdk): the SDK currently lacks a canonical mock signer, x402.ts
  * ships only the X402Client and an X402Signer interface. Adding a
  * `MockX402Signer` to the SDK would remove this stub. For the
  * repo-separation rule we inline it here rather than expand the SDK
@@ -219,19 +219,19 @@ export interface PricedQueryReceipt {
   accord_id: string;
   request_nonce: string;
   provider: string;
-  acted_by: string; // D-ID8 Sovereign handle
-  drafted_with: string; // D-ID8 Instrument handle
+  acted_by: string; // identity-trailer Sovereign handle
+  drafted_with: string; // identity-trailer Instrument handle
   tool: string;
   response: unknown;
   settlement: X402Settlement;
   split: {
     // Bps of the gross amount. Agent-to-agent flows with no member
-    // mean `member_bps` is redirected per pending D-CO23 ratification.
+    // mean `member_bps` is redirected once that handling is finalised.
     member_bps: number;
     facilitator_bps: number;
     alter_bps: number;
     cooperative_bps: number;
-    alter_bps: number; // D-RS8 10% of ALTER share when org-attested
+    org_alter_bps: number; // 10% of the ALTER share when org-attested
     notes: string[];
   };
   issued_at: string;
@@ -290,7 +290,7 @@ export async function verifyReceipt(
   return { valid: true };
 }
 
-// ── D-CD1 / D-RS8 split math (illustrative — see README banner) ──────────
+// ── Revenue-split math (illustrative, see README banner) ─────────────────
 
 export interface SplitInput {
   grossAmount: string; // display units, e.g. "0.01"
@@ -304,23 +304,22 @@ export interface SplitResult {
   facilitator_bps: number;
   alter_bps: number;
   cooperative_bps: number;
-  alter_bps: number;
+  org_alter_bps: number;
   notes: string[];
 }
 
 /**
- * Compute the D-CD1 revenue split.
+ * Compute the ALTER revenue split.
  *
- * Baseline (D-CD1):       75 / 5 / 15 / 5   member / facilitator / ALTER / cooperative
- * Org-attested adder (D-RS8): +10% of ALTER's 15% goes to the Org Alter
- *   → ALTER keeps 13.5% of gross, Org Alter takes 1.5% of gross.
+ * Baseline:                75 / 5 / 15 / 5   member / facilitator / ALTER / cooperative
+ * Org-attested adder:      +10% of ALTER's 15% goes to the Org Alter,
+ *   so ALTER keeps 13.5% of gross and the Org Alter takes 1.5% of gross.
  *
- * Agent-to-agent (no member) behaviour is PENDING a Decision Register
- * entry (see standup-as-category-deep-dive Part IV). Until then the
- * 7500 bps nominally earmarked for the member is flagged in `notes[]`
- * as illustrative-only; this example does NOT take a position on where
- * those bps land (cooperative, facilitator, or a new "no-member
- * rebate" bucket).
+ * Agent-to-agent (no member) behaviour is still being finalised. Until
+ * then the 7500 bps nominally earmarked for the member is flagged in
+ * `notes[]` as illustrative-only; this example does NOT take a position
+ * on where those bps land (cooperative, facilitator, or a new
+ * "no-member rebate" bucket).
  */
 export function computeSplit(input: SplitInput): SplitResult {
   const notes: string[] = [];
@@ -331,16 +330,16 @@ export function computeSplit(input: SplitInput): SplitResult {
   let orgAlter = 0;
 
   if (input.orgAttested) {
-    // D-RS8: 10% of ALTER's 15% = 1.5% of gross → Org Alter.
+    // Org-attested adder: 10% of ALTER's 15% = 1.5% of gross to the Org Alter.
     orgAlter = Math.round(alter * 0.1); // 150 bps
     alter = alter - orgAlter; // 1350 bps
-    notes.push('D-RS8 applied: 10% of ALTER share redirected to Org Alter (1500 → 1350 + 150 bps).');
+    notes.push('Org-attested adder applied: 10% of ALTER share redirected to Org Alter (1500 to 1350 + 150 bps).');
   }
 
   if (!input.hasMember) {
     notes.push(
       'No member in this flow (agent-to-agent L2 priced query). The 7500 bps member share is ' +
-        'illustrative-only pending D-CO23 agent-to-agent metadata exclusion DR entry — see README banner. ' +
+        'illustrative-only while member-less handling is being finalised, see README banner. ' +
         'This example leaves the 7500 bps UNALLOCATED; production flows MUST resolve before settlement.',
     );
     member = 0;
@@ -349,7 +348,7 @@ export function computeSplit(input: SplitInput): SplitResult {
   const total = member + facilitator + alter + cooperative + orgAlter;
   notes.push(
     `Bps accounted for: ${total}/10000` +
-      (input.hasMember ? ' (sums to 10000 = full pool)' : ` (${10000 - total} bps unallocated — see above)`),
+      (input.hasMember ? ' (sums to 10000 = full pool)' : ` (${10000 - total} bps unallocated, see above)`),
   );
 
   return {
@@ -357,7 +356,7 @@ export function computeSplit(input: SplitInput): SplitResult {
     facilitator_bps: facilitator,
     alter_bps: alter,
     cooperative_bps: cooperative,
-    alter_bps: orgAlter,
+    org_alter_bps: orgAlter,
     notes,
   };
 }
