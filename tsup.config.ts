@@ -34,7 +34,7 @@ export default defineConfig([
     dts: false,
     splitting: false,
     // CLI sourcemaps also ship via package.json "dist/" allowlist, disable
-    // to prevent full TypeScript source leaking to npm consumers (sdk/H-1).
+    // to prevent full TypeScript source leaking to npm consumers.
     sourcemap: false,
     clean: false,
     target: 'node18',

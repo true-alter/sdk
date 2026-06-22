@@ -297,7 +297,7 @@ export class MCPClient {
         throw new AlterPaymentRequired(this.guessToolName(payload), envelope);
       }
       if (resp.status === 429) {
-        // sdk/L-1 pentest 2026-04-17: Retry-After is server-controlled. Cap
+        // Retry-After is server-controlled. Cap
         // to 300 s so a hostile server can't amplify a single 429 into an
         // indefinite sleep / agent hang. Fall back to 60 s when the header
         // is missing or non-numeric.

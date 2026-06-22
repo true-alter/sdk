@@ -124,7 +124,7 @@ function normaliseDomain(input: string): string {
 
 /**
  * Validate a URL returned from DNS TXT or `.well-known` discovery before
- * accepting it as an MCP endpoint. sdk/W-4 pentest 2026-04-17.
+ * accepting it as an MCP endpoint.
  *
  * - Requires `https:` (rejects `http:` and any non-https scheme).
  * - Rejects `user:pass@host`, Basic-auth credentials in a discovery doc

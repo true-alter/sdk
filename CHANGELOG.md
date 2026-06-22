@@ -54,7 +54,7 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
 
 - **Version unification with `@truealter/cli` 0.5.0 + well-known
   publication parity** (0.5.0). Cuts `@truealter/sdk` from `0.4.3` to
-  `0.5.0` as a coordinated post-pentest signal alongside
+  `0.5.0` as a coordinated release alongside
   `@truealter/cli` 0.5.0. Closes a multi-week drift between the
   published SDK version, the version advertised at
   `truealter.com/.well-known/alter-versions.json` (was stuck at
@@ -113,7 +113,7 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
 ### Removed
 
 - **Three experimental tool method bindings** whose server-side handlers
-  were withdrawn from the live MCP surface in hotfix #421 (11 Apr 2026).
+  were withdrawn from the live MCP surface on 11 Apr 2026.
   The SDK still advertised them in `FREE_TOOL_NAMES`, the registries
   (`TOOL_TIERS`, `TOOL_COSTS`, `TOOL_BLAST_RADIUS`), and as methods on
   `AlterClient`. Now removed so the SDK matches what the server actually
@@ -128,7 +128,7 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
   field names (`candidate_id`, etc.) are unchanged because they are
   server-contract identifiers; only human-readable descriptions moved.
 - **Trademark notice** now references "the Trill", the canonical name
-  for the `~` mark (locked 7 Apr 2026, brand-internal#100), instead of
+  for the `~` mark (locked 7 Apr 2026), instead of
   the legacy "Alter Stroke (~) device mark" wording.
 - Tool count summary: `40 total, 28 free (L0) + 12 premium` →
   `37 total, 25 free (L0) + 12 premium`.
@@ -156,7 +156,7 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
 
 ### Security
 
-- **CRITICAL (C-4): Harden `verify_at` resolution against hostile MCP
+- **CRITICAL: Harden `verify_at` resolution against hostile MCP
   servers.** `verifyProvenance()` previously trusted any `http://` or
   `https://` URL supplied in the server response envelope's `verify_at`
   field when fetching the JWKS for ES256 signature verification. A

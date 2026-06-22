@@ -144,7 +144,7 @@ describe('verifyToolSignatures', () => {
   });
 });
 
-describe('resolveVerifyAt, hostname allowlist (C-4 defence)', () => {
+describe('resolveVerifyAt, hostname allowlist', () => {
   it('rejects attacker hostnames not on the allowlist', () => {
     expect(() => resolveVerifyAt('https://evil.example.com/.well-known/keys.json')).toThrow(
       /not on the verify_at allowlist/,
@@ -198,7 +198,7 @@ describe('resolveVerifyAt, hostname allowlist (C-4 defence)', () => {
     );
   });
 
-  it('rejects URLs with userinfo even when hostname is allowlisted (sdk/M-1)', () => {
+  it('rejects URLs with userinfo even when hostname is allowlisted', () => {
     expect(() =>
       // pragma: allowlist nextline secret
       resolveVerifyAt('https://user:secret@api.truealter.com/.well-known/alter-keys.json'),
@@ -210,7 +210,7 @@ describe('resolveVerifyAt, hostname allowlist (C-4 defence)', () => {
   });
 });
 
-describe('fetchJwks, body-size cap and cache bounds (sdk/H-2 + M-2)', () => {
+describe('fetchJwks, body-size cap and cache bounds', () => {
   async function buildValidEnvelope(): Promise<{
     token: string;
     jwks: { keys: unknown[] };

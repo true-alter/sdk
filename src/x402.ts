@@ -77,7 +77,7 @@ export class X402Client {
       throw new AlterError('PAYMENT_REQUIRED', `asset ${envelope.asset} not permitted by client policy`);
     }
     if (this.maxPerQuery !== undefined) {
-      // sdk/M-4 pentest 2026-04-17: `Number("NaN") > X` is always `false`,
+      // `Number("NaN") > X` is always `false`,
       // so a server-controlled non-numeric `amount` silently bypasses the
       // cap. Require a finite, non-negative number before comparison.
       const amt = Number(envelope.amount);
