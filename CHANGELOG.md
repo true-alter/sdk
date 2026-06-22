@@ -37,7 +37,7 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
 - **`MCPClient` `extraHeaders` option** (0.4.3). Support for custom
   authentication headers when the endpoint sits behind an additional
   gate that needs its own credentials. Protocol-level and
-  ALTER-internal headers always win over user-supplied collisions.
+  ALTER protocol headers always win over user-supplied collisions.
 - **`alter-mcp-bridge` env-var hooks for custom gate headers** (0.4.3).
   Bridge now reads an `ALTER_BRIDGE_HEADERS` environment variable
   (JSON object, full escape hatch) at start-up and applies its entries
@@ -93,8 +93,8 @@ shipping on npm as `@truealter/sdk`). Intermediate npm releases `0.2.4`, `0.3.0`
   validly-signed token minted by a different ALTER identity to pass
   verification (cross-identity substitution). The expected issuer
   defaults to `did:alter:platform`; callers with non-platform issuers
-  may override via the new `expectedIss` option. Fixes IaI clause #2
-  (provenance) violation identified in pentest finding S8-H-1.
+  may override via the new `expectedIss` option. Closes a provenance
+  verification gap.
 
 ### Removed
 

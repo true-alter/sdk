@@ -84,8 +84,7 @@ export const DEFAULT_VERIFY_AT_ALLOWLIST: readonly string[] = Object.freeze([
 /**
  * The `iss` claim that ALTER's platform signs into every provenance token.
  * Verifiers check `payload.iss` against this constant (or the caller-supplied
- * `expectedIss` override) to prevent cross-identity substitution, IaI clause
- * #2 (provenance).
+ * `expectedIss` override) to prevent cross-identity substitution.
  */
 export const ALTER_PLATFORM_ISS = 'did:alter:platform';
 
@@ -231,9 +230,9 @@ export async function verifyProvenance(
     return { valid: false, reason: 'issued in the future', payload, kid: header.kid };
   }
 
-  // S8-H-1: validate `iss` claim to prevent cross-identity substitution (IaI
-  // clause #2, provenance). The expected issuer defaults to the ALTER platform
-  // DID; callers may override via `opts.expectedIss` for non-platform issuers.
+  // Validate `iss` claim to prevent cross-identity substitution. The expected
+  // issuer defaults to the ALTER platform DID; callers may override via
+  // `opts.expectedIss` for non-platform issuers.
   // An explicit empty string opts out of the check (test fixtures only).
   const expectedIss = opts.expectedIss !== undefined ? opts.expectedIss : ALTER_PLATFORM_ISS;
   if (expectedIss !== '' && payload.iss !== expectedIss) {

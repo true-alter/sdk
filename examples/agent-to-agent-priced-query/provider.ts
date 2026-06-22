@@ -12,7 +12,7 @@
  *        - accept the settlement reference on the retry
  *        - execute a stub handler (hardcoded compute_belonging payload)
  *        - return a signed receipt carrying the identity trailer block
- *          (`Acted-By: ~blake`, `Drafted-With: ~cc-sonnet-4-6`).
+ *          (`Acted-By: ~example-provider`, `Drafted-With: ~cc-sonnet-4-6`).
  *
  * This file is reference code, it exposes each step as a callable
  * function so the requester can drive them in-process without an

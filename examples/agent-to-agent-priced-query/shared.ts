@@ -76,7 +76,7 @@ export function loadEnv(): ExampleEnv {
     PRICED_QUERY_AMOUNT: raw.PRICED_QUERY_AMOUNT ?? '0.01',
     REQUESTER_HANDLE: raw.REQUESTER_HANDLE ?? '~cc-opus-4-6',
     PROVIDER_HANDLE: raw.PROVIDER_HANDLE ?? '~cc-sonnet-4-6',
-    PROVIDER_ACTED_BY: raw.PROVIDER_ACTED_BY ?? '~blake',
+    PROVIDER_ACTED_BY: raw.PROVIDER_ACTED_BY ?? '~example-provider',
     REQUESTER_PRIVATE_KEY_PATH: raw.REQUESTER_PRIVATE_KEY_PATH ?? './requester.key',
     PROVIDER_PRIVATE_KEY_PATH: raw.PROVIDER_PRIVATE_KEY_PATH ?? './provider.key',
     PROVENANCE_LOG_PATH: raw.PROVENANCE_LOG_PATH ?? './provenance-log.jsonl',

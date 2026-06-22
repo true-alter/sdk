@@ -34,7 +34,7 @@ Instrument-tier handles transacting across the ALTER rails with:
      `alter_bps` / `cooperative_bps`, plus org-attested redirects
      where applicable),
    - an identity trailer block on the receipt itself:
-     `Acted-By: ~blake` (Sovereign) and
+     `Acted-By: ~example-provider` (Sovereign) and
      `Drafted-With: ~cc-sonnet-4-6` (Instrument).
 5. **Cryptographic receipt verification** at the requester:
    Ed25519 signature check over canonical-JSON of the receipt,

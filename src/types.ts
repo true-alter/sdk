@@ -81,7 +81,7 @@ export interface HelloAgentOutput {
   };
 }
 
-/** (free) alter_resolve_handle, Resolve a ~handle (e.g. ~drew) to canonical form and kind */
+/** (free) alter_resolve_handle, Resolve a ~handle (e.g. ~alice) to canonical form and kind */
 export interface AlterResolveHandleInput {
   query: string;
 }

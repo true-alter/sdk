@@ -156,8 +156,7 @@ export interface HomepageOutput {
  *   `attested` provenance fields without explicit per-field consent
  *   (EU AI Act Art 5(1)(d) categorical).
  * - All other callers may read `declared` and `attested` fields by
- *   default; `derived` fields require stream-specific consent per
- *   IaI clause 5.
+ *   default; `derived` fields require stream-specific consent.
  */
 export type HomepageCallerVertical =
   | "workplace"

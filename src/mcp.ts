@@ -57,7 +57,7 @@ export interface MCPClientOptions {
   /**
    * Extra HTTP headers added to every request. Useful when the endpoint
    * sits behind an additional gate that requires its own credentials.
-   * Protocol-level headers (`Content-Type`, `Accept`) and ALTER-internal
+   * Protocol-level headers (`Content-Type`, `Accept`) and ALTER protocol
    * headers (`X-ALTER-API-Key`, `Mcp-Session-Id`,
    * `Mcp-Invocation-Signature`) always win over collisions here.
    */

@@ -138,7 +138,7 @@ export class AlterClient {
     return this.mcp.callTool('hello_agent', {});
   }
 
-  /** Resolve a ~handle (e.g. ~drew) to its canonical form and kind. No auth required. */
+  /** Resolve a ~handle (e.g. ~alice) to its canonical form and kind. No auth required. */
   async resolveHandle(args: AlterResolveHandleInput | string): Promise<MCPCallToolResult> {
     const payload: AlterResolveHandleInput =
       typeof args === 'string' ? { query: args } : args;

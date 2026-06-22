@@ -423,7 +423,7 @@ Until then, use `endpoint: "https://mcp.truealter.com/api/v1/mcp"` (the default)
 | Name                      | Tier | Cost  | Description                                                                                                          |
 |---------------------------|------|-------|----------------------------------------------------------------------------------------------------------------------|
 | `hello_agent`             | L0   | free  | First handshake with ALTER - returns server version, authentication status, your trust tier, and available tool counts. |
-| `alter_resolve_handle`    | L0   | free  | Resolve a `~handle` (e.g. `~drew`) to its canonical form and kind. No auth required - the handle-wedge entry point.  |
+| `alter_resolve_handle`    | L0   | free  | Resolve a `~handle` (e.g. `~alice`) to its canonical form and kind. No auth required - the handle-wedge entry point.  |
 | `list_archetypes`         | L0   | free  | Returns archetype reference data.                                                                                    |
 | `verify_identity`         | L0   | free  | Verify whether a person is registered with ALTER and validate optional identity claims.                              |
 | `initiate_assessment`     | L0   | free  | Get a URL where a person can complete their ALTER Discovery assessment.                                              |
