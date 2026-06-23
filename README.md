@@ -349,7 +349,7 @@ This is what makes ~alter usable as identity infrastructure rather than just an 
 
 ## Discovery
 
-~alter follows the discovery cascade specified in [draft-morrison-mcp-dns-discovery-01](https://datatracker.ietf.org/doc/draft-morrison-mcp-dns-discovery/). Given a domain (e.g. `truealter.com`), the SDK resolves the MCP endpoint in three steps, falling through on each failure:
+~alter follows the discovery cascade specified in [draft-morrison-mcp-dns-discovery-04](https://datatracker.ietf.org/doc/draft-morrison-mcp-dns-discovery/). Given a domain (e.g. `truealter.com`), the SDK resolves the MCP endpoint in three steps, falling through on each failure:
 
 1. **DNS TXT** - query `_mcp.truealter.com` for a TXT record of the form `mcp=https://mcp.truealter.com;version=2025-11-25`. This is the fastest path and works without an HTTP round-trip.
 2. **`.well-known/mcp.json`** - fetch `https://truealter.com/.well-known/mcp.json` for the standard MCP server descriptor. This is the cross-vendor fallback.

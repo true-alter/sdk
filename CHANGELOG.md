@@ -88,7 +88,7 @@ shipping on npm as `@truealter/sdk`. Intermediate npm releases `0.2.4`,
 
 - **`verifyProvenance` now validates the `iss` claim** (0.4.2).
   Previously only `exp` and `iat` were checked, allowing a
-  validly-signed token minted by a different ALTER identity to pass
+  validly-signed token minted by a different ~alter identity to pass
   verification (cross-identity substitution). The expected issuer
   defaults to `did:alter:platform`; callers with non-platform issuers
   may override via the new `expectedIss` option. Closes a provenance
