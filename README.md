@@ -367,18 +367,6 @@ const httpsOnly = await discover("truealter.com", { skipDns: true });
 
 This draft is the author's Internet-Draft (not yet adopted by an IETF working group); until adoption, the cascade order may change. Pin the SDK version to a specific minor release if you depend on this behaviour.
 
-## Local Daemon vs Remote MCP
-
-The companion Python package `alter-identity` (PyPI) ships a persistent daemon that holds a hot in-process cache of trait vectors and identity stubs over a Unix socket at `unix:///run/user/$UID/alter-identity.sock`. Hooking the TypeScript SDK up to that daemon is on the roadmap - for now, every `AlterClient` talks to the configured remote endpoint over HTTPS.
-
-When the local-daemon adapter ships:
-
-- **Latency:** sub-millisecond for cached L0 calls.
-- **Cost:** zero on cached responses - x402 settlement is skipped.
-- **Provenance:** the daemon re-signs responses with its locally-bound ES256 key, so downstream verification remains uniform.
-
-Until then, use `endpoint: "https://mcp.truealter.com/api/v1/mcp"` (the default) and the SDK behaves identically across Node, Deno, Bun, Cloudflare Workers, and the browser.
-
 ## Tools
 
 The server advertises **36 tools**: 27 free (L0) and 9 premium (L1 to L5). The tables below document the SDK's typed methods; the live `tools/list` response is the canonical source for the full set.
@@ -424,8 +412,6 @@ The server advertises **36 tools**: 27 free (L0) and 9 premium (L1 to L5). The t
 | `compute_belonging`        | L4   | $0.05   | Compute belonging probability for a person-job pairing (authenticity, acceptance, complementarity).        |
 | `get_match_recommendations`| L5   | $0.50   | Get top N match recommendations for a person, ranked by composite score with quality tiers.                |
 | `generate_match_narrative` | L5   | $0.50   | Generate a human-readable narrative explaining a specific match - strengths, growth areas, belonging.         |
-
-> **Write-side tools** (`create_identity_stub`, `submit_context`, `submit_batch_context`, `submit_structured_profile`, `submit_social_links`, `attest_domain`, `dispute_attestation`) were part of earlier SDK versions but are not yet live on the public MCP server pending the per-peer consent architecture and grant model. They will return as typed methods once server-side and consent gating lands.
 
 ## Contributing
 
