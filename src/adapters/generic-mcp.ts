@@ -49,7 +49,7 @@ export function generateGenericMcpConfig(opts: GenerateMcpConfigOptions = {}): G
   const entry: McpServerConfig = {
     url: opts.endpoint ?? DEFAULT_ENDPOINT,
     transport: 'streamable-http',
-    description: 'ALTER Identity, psychometric identity field for AI agents',
+    description: '~Alter, psychometric identity field for AI agents',
   };
   if (Object.keys(headers).length > 0) entry.headers = headers;
 

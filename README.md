@@ -6,10 +6,10 @@ A TypeScript and JavaScript client for the ~Alter identity field: verify a perso
 
 [![npm version](https://img.shields.io/npm/v/@truealter/sdk.svg)](https://www.npmjs.com/package/@truealter/sdk)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
-[![CI](https://github.com/true-alter/sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/true-alter/sdk/actions/workflows/ci.yml)
+[![CI](https://github.com/true-alter/alter-identity/actions/workflows/ci.yml/badge.svg)](https://github.com/true-alter/alter-identity/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](#api)
-[![Glama score](https://glama.ai/mcp/servers/true-alter/sdk/badges/score.svg)](https://glama.ai/mcp/servers/true-alter/sdk)
-[![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/sdk)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/sdk)
+[![Glama score](https://glama.ai/mcp/servers/true-alter/alter-identity/badges/score.svg)](https://glama.ai/mcp/servers/true-alter/alter-identity)
+[![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/alter-identity)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/alter-identity)
 
 > **Install:** `npm install @truealter/sdk`
 > **Publish channel:** the SDK ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). This repository is its public source; PRs and issues are welcome here and are incorporated into tagged releases.
@@ -83,7 +83,7 @@ const verified = await alter.verify("~alter");
 const verifiedById = await alter.verify(
   "550e8400-e29b-41d4-a716-446655440000",
   {
-    archetype: "weaver",
+    archetype: "strategist",
     min_engagement_level: 3,
     traits: { pressure_response: { min: 0.6 } },
   },
@@ -112,30 +112,30 @@ const thread = await alter.goldenThreadStatus();
 ### Premium tier (L1 to L5, x402 payment required)
 
 ```ts
-// L1 - Extract trait signals from text ($0.005, first 100 free per bot)
+// L1 - Extract trait signals from text
 const signals = await alter.assessTraits({
   text: "I led the incident response when our payment rails went down...",
   context: "interview transcript",
 });
 
-// L2 - Full 33-trait vector ($0.01)
+// L2 - Full trait vector
 const vector = await alter.getFullTraitVector({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
 });
 
-// L4 - Belonging probability for a person-job pairing ($0.05)
+// L4 - Belonging probability for a person-job pairing
 const belonging = await alter.computeBelonging({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
   job_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
 });
 
-// L5 - Top match recommendations ($0.50)
+// L5 - Top match recommendations
 const recommendations = await alter.getMatchRecommendations({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
   limit: 5,
 });
 
-// L5 - Human-readable narrative explaining a match ($0.50)
+// L5 - Human-readable narrative explaining a match
 const narrative = await alter.generateMatchNarrative({
   match_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
 });
@@ -211,7 +211,7 @@ Resulting `.mcp.json`:
     "alter": {
       "url": "https://mcp.truealter.com/api/v1/mcp",
       "transport": "streamable-http",
-      "description": "ALTER Identity - psychometric identity field for AI agents",
+      "description": "~Alter, psychometric identity field for AI agents",
       "headers": {
         "X-ALTER-API-Key": "ak_..."
       }
@@ -319,7 +319,7 @@ const result = await alter.getFullTraitVector({
 });
 
 const check = await alter.verifyProvenance(result._meta?.provenance);
-if (!check.valid) throw new Error(`ALTER provenance check failed: ${check.reason}`);
+if (!check.valid) throw new Error(`~alter provenance check failed: ${check.reason}`);
 ```
 
 The SDK fetches public keys from `https://api.truealter.com/.well-known/alter-keys.json` and caches them per their `Cache-Control` headers. The endpoint returns a JWKS containing all current and recently-rotated signing keys; verifying clients should accept any key whose `kid` matches and is still within its validity window.
@@ -402,16 +402,18 @@ The server advertises **36 tools**: 27 free (L0) and 9 premium (L1 to L5). The t
 
 ### Premium tools (L1 to L5, x402 payment required)
 
-| Name                       | Tier | Cost    | Description                                                                                                   |
-|----------------------------|------|---------|---------------------------------------------------------------------------------------------------------------|
-| `assess_traits`            | L1   | $0.005  | Extract trait signals from a text passage against the ~alter trait taxonomy.                                     |
-| `get_trait_snapshot`       | L1   | $0.005  | Get the top 5 traits for a person with confidence scores and archetype.                                    |
-| `get_full_trait_vector`    | L2   | $0.01   | Get the complete trait vector for a person - complete trait vector with scores and confidence intervals.                                    |
-| `get_side_quest_graph`     | L2   | $0.01   | Get a person's Side Quest Graph - multi-domain identity model with differential privacy noise (ε=1.0).     |
-| `query_graph_similarity`   | L3   | $0.025  | Compare two Side Quest Graphs for team composition and matching (ε=0.5 differential privacy).                 |
-| `compute_belonging`        | L4   | $0.05   | Compute belonging probability for a person-job pairing (authenticity, acceptance, complementarity).        |
-| `get_match_recommendations`| L5   | $0.50   | Get top N match recommendations for a person, ranked by composite score with quality tiers.                |
-| `generate_match_narrative` | L5   | $0.50   | Generate a human-readable narrative explaining a specific match - strengths, growth areas, belonging.         |
+Per-call price is returned in the `402 Payment Required` envelope before any settlement, and the live `tools/list` and `.well-known/mcp.json` carry the current per-tool pricing. The table below documents the tier, not the price.
+
+| Name                       | Tier | Description                                                                                                   |
+|----------------------------|------|---------------------------------------------------------------------------------------------------------------|
+| `assess_traits`            | L1   | Extract trait signals from a text passage against the ~alter trait taxonomy.                                     |
+| `get_trait_snapshot`       | L1   | Get the top 5 traits for a person with confidence scores and archetype.                                    |
+| `get_full_trait_vector`    | L2   | Get the complete trait vector for a person, with scores and confidence intervals.                                    |
+| `get_side_quest_graph`     | L2   | Get a person's Side Quest Graph, a multi-domain identity model with differential privacy noise (ε=1.0).     |
+| `query_graph_similarity`   | L3   | Compare two Side Quest Graphs for team composition and matching (ε=0.5 differential privacy).                 |
+| `compute_belonging`        | L4   | Compute belonging probability for a person-job pairing (authenticity, acceptance, complementarity).        |
+| `get_match_recommendations`| L5   | Get top N match recommendations for a person, ranked by composite score with quality tiers.                |
+| `generate_match_narrative` | L5   | Generate a human-readable narrative explaining a specific match (strengths, growth areas, belonging).         |
 
 ## Contributing
 

@@ -49,7 +49,7 @@ export function generateClaudeDesktopConfig(
   const entry: ClaudeDesktopServerConfig = {
     command: bridgeCommand,
     env,
-    description: 'ALTER Identity, psychometric identity field for AI agents',
+    description: '~Alter, psychometric identity field for AI agents',
   };
   if (opts.extraArgs && opts.extraArgs.length > 0) {
     entry.args = [...opts.extraArgs];
