@@ -2,7 +2,7 @@
 
 # @truealter/sdk
 
-~alter Identity SDK. Query the continuous identity field from any JavaScript or TypeScript environment.
+A TypeScript and JavaScript client for the ~Alter identity field: verify a person is known, query inferred traits, and settle premium calls in USDC.
 
 [![npm version](https://img.shields.io/npm/v/@truealter/sdk.svg)](https://www.npmjs.com/package/@truealter/sdk)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
@@ -14,7 +14,7 @@
 > **Install:** `npm install @truealter/sdk`
 > **Publish channel:** the SDK ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). This repository is its public source; PRs and issues are welcome here and are incorporated into tagged releases.
 
-A thin client over the ~alter MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spec `2025-11-25`) with x402 micropayment support, ES256 provenance verification, and config generators for Claude Code, Cursor, and generic MCP clients.
+A thin client over the ~Alter MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spec `2025-11-25`) with x402 micropayment support, ES256 provenance verification, and config generators for Claude Code, Cursor, and generic MCP clients.
 
 - **Branded host:** `https://mcp.truealter.com` (serves `.well-known/mcp.json` for discovery)
 - **JSON-RPC wire endpoint:** `https://mcp.truealter.com/api/v1/mcp` - this is what Streamable HTTP POSTs target (the SDK default)
