@@ -6,10 +6,10 @@
 
 [![npm version](https://img.shields.io/npm/v/@truealter/sdk.svg)](https://www.npmjs.com/package/@truealter/sdk)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
-[![CI](https://github.com/true-alter/alter-identity/actions/workflows/ci.yml/badge.svg)](https://github.com/true-alter/alter-identity/actions/workflows/ci.yml)
+[![CI](https://github.com/true-alter/sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/true-alter/sdk/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](#api)
-[![Glama score](https://glama.ai/mcp/servers/true-alter/alter-identity/badges/score.svg)](https://glama.ai/mcp/servers/true-alter/alter-identity)
-[![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/alter-identity)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/alter-identity)
+[![Glama score](https://glama.ai/mcp/servers/true-alter/sdk/badges/score.svg)](https://glama.ai/mcp/servers/true-alter/sdk)
+[![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/sdk)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/sdk)
 
 > **Install:** `npm install @truealter/sdk`
 > **Publish channel:** the SDK ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). This repository is its public source; PRs and issues are welcome here and are incorporated into tagged releases.
