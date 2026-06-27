@@ -1,4 +1,5 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
-  "maintainers": ["maxchop", "true-alter"]
+  "maintainers": ["maxchop", "true-alter"],
+  "description": "~Alter Identity SDK - query the continuous identity field from any JavaScript/TypeScript environment.\n\nVerify whether a person is known to ~Alter, query psychometric trait vectors, compute belonging probability for a person-org pairing, and resolve ~handles to canonical form. Every premium call settles via x402 micropayments on Base L2 (USDC); 75% of each settled call flows to the member as Identity Income, your identity earns. ~Alter receives only its protocol cut. No custodian, no broker.\n\nAnonymous callers get L0 free tools. Authenticated agents register via `alter login` and access L1-L5 via x402, with per-call pricing visible after sign-in. Member credentials are scoped to the caller's own data on all strict tools.\n\n37 publicly advertised tools (28 free, 9 premium L1-L5) across identity, assessment, matching, graph, and trust. Streamable-HTTP MCP transport at https://mcp.truealter.com/api/v1/mcp. Apache-2.0 SDK."
 }
