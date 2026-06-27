@@ -1,8 +1,6 @@
-> **Public source for `@truealter/sdk`.** This repository is the public reference for the SDK that ships on npm. File issues here. Pull requests are welcome and are incorporated into tagged releases.
-
 # @truealter/sdk
 
-A TypeScript and JavaScript client for the ~Alter identity field: verify a person is known, query inferred traits, and settle premium calls in USDC.
+~Alter Identity SDK - query the continuous identity field from any JavaScript/TypeScript environment.
 
 [![npm version](https://img.shields.io/npm/v/@truealter/sdk.svg)](https://www.npmjs.com/package/@truealter/sdk)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
@@ -12,14 +10,13 @@ A TypeScript and JavaScript client for the ~Alter identity field: verify a perso
 [![AI Agent Marketplace](https://www.deepnlp.org/api/ai_agent_marketplace/svg?name=truealter/alter-identity)](https://www.deepnlp.org/store/ai-agent/identity/pub-truealter/alter-identity)
 
 > **Install:** `npm install @truealter/sdk`
-> **Publish channel:** the SDK ships on npm as [`@truealter/sdk`](https://www.npmjs.com/package/@truealter/sdk). This repository is its public source; PRs and issues are welcome here and are incorporated into tagged releases.
 
 A thin client over the ~Alter MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spec `2025-11-25`) with x402 micropayment support, ES256 provenance verification, and config generators for Claude Code, Cursor, and generic MCP clients.
 
 - **Branded host:** `https://mcp.truealter.com` (serves `.well-known/mcp.json` for discovery)
 - **JSON-RPC wire endpoint:** `https://mcp.truealter.com/api/v1/mcp` - this is what Streamable HTTP POSTs target (the SDK default)
 - **Wire protocol:** Streamable HTTP, JSON-RPC 2.0, MCP `2025-11-25` (server negotiates `2025-06-18` + `2025-03-26` for backwards-compatible clients)
-- **Tools:** **36 typed and wired**, 27 free (L0) + 9 premium (L1 to L5). Every advertised name has a matching server handler at `mcp.truealter.com/api/v1/mcp`.
+- **Tools:** **37 publicly advertised**, 28 free (L0) + 9 premium (L1-L5), kept in sync with ~Alter's live MCP server at every publish.
 - **Runtime:** Node 18+, Deno, Bun, Cloudflare Workers, modern browsers
 - **Crypto:** `@noble/ed25519` + `@noble/hashes` (no other dependencies)
 - **Bundle:** ESM + CJS dual output
@@ -27,23 +24,47 @@ A thin client over the ~Alter MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spe
 ## Quickstart
 
 ```
-npm i @truealter/sdk
+npm install @truealter/sdk
 ```
 
-```ts
-import { AlterClient } from "@truealter/sdk";
+Then import the client in your code (see the API section below). The
+day-to-day command line lives in
+[`@truealter/cli`](https://www.npmjs.com/package/@truealter/cli):
 
-const alter = new AlterClient();
-const verified = await alter.verify("~alter");
+```
+alter init
+alter verify ~alter
 ```
 
-## Why ~alter is not IAM
+## Bridge vs SDK
 
-Identity Access Management answers *who is logged in*. ~alter answers *who they actually are*, a continuous field of recognition that any IAM stack can sit on top of.
+This package ships a stdio bridge entrypoint (`bin/mcp-bridge.ts`,
+built to `dist/bin/mcp-bridge.js`) that the `alter` CLI launches by file
+path via its `mcp-bridge` subcommand. It is a **dev/demo surface** for
+dropping ~Alter into MCP hosts that speak the stdio transport (Claude Code,
+Cursor, Continue, Windsurf). It is useful for handshake, `tools/list`, and
+L0 tool calls, but it does not carry ES256 per-invocation signing:
+authenticated MCP tools will fail at the server edge when reached through
+the bridge. For production use, import `@truealter/sdk` directly and
+construct an `MCPClient` / `AlterClient` with the optional `signing`
+parameter; that path is the primary one and carries the provenance
+envelope end-to-end. Bridge signing is planned for a future release.
+
+## CLI
+
+This package exposes no command-line binary of its own: it is a library you
+import. The bridge entrypoint above is not a published `bin`; it is resolved
+by file path from the `alter` CLI, which is distributed separately as
+[`@truealter/cli`](https://www.npmjs.com/package/@truealter/cli). Run
+`alter --help` for the inline reference.
+
+## Why ~Alter is not IAM
+
+Identity Access Management answers *who is logged in*. ~Alter answers *who they actually are* - a continuous field of recognition that any IAM stack can sit on top of.
 
 ## Theoretical Foundation
 
-~alter is the working instantiation of an eight-paper academic corpus on identity field theory. The SDK below is what happens when the theory ships as protocol. Each paper is open access on figshare under CC-BY 4.0.
+~Alter is the working instantiation of an eight-paper academic corpus on identity field theory. The SDK below is what happens when the theory ships as protocol. Each paper is open access on figshare under CC-BY 4.0.
 
 | Paper | Title | DOI |
 |-------|-------|-----|
@@ -75,6 +96,90 @@ const alter = new AlterClient({
 });
 ```
 
+### Minimum-version preflight (required)
+
+~Alter's backend publishes a per-client minimum-version floor. The SDK
+preflights this floor lazily on the first network call: no explicit
+call is required for the common case. If the running SDK is below the
+floor for `alter-identity`, the SDK throws `BelowFloorError` with the
+upgrade command attached.
+
+The floor document is signed by the backend with a floor-only Ed25519
+private key. The SDK ships only the corresponding public keys
+(`KNOWN_FLOOR_PUBLIC_KEYS`, a `key_id` to SPKI-PEM map): no signing
+secret ships in the client, and a compromised client cannot forge floor
+documents. The `key_id` is the first 8 hex chars of SHA-256 of the raw
+32-byte Ed25519 public key, so clients select the right key during a
+rotation. An unknown `key_id` or an invalid signature is treated as a
+cache miss (refetch), never as a pass.
+
+```ts
+import { AlterClient, BelowFloorError, checkMinVersion } from "@truealter/sdk";
+
+// Optional: run the preflight explicitly to surface the upgrade
+// prompt at startup, before any real work happens:
+try {
+  await checkMinVersion();
+} catch (err) {
+  if (err instanceof BelowFloorError) {
+    console.error(`upgrade required: ${err.upgrade_cmd}`);
+    process.exit(1);
+  }
+  throw err;
+}
+
+// The constructor installs the same hook lazily: it fires on your
+// first request automatically:
+const alter = new AlterClient();
+try {
+  await alter.verify("~alter");
+} catch (err) {
+  if (err instanceof BelowFloorError) {
+    // Re-thrown on every subsequent call until you upgrade.
+    console.error(`upgrade: ${err.upgrade_cmd}`);
+  }
+}
+```
+
+`BelowFloorError` carries the canonical envelope fields as enumerable
+properties so consumers can branch without re-parsing:
+
+| Property         | Type   | Example                              |
+| ---------------- | ------ | ------------------------------------ |
+| `code`           | string | `"client_below_floor"`               |
+| `client_version` | string | `"0.5.2"`                            |
+| `min_version`    | string | `"0.6.0"`                            |
+| `upgrade_cmd`    | string | `"npm install -g @truealter/sdk"`    |
+| `channel`        | string | `"npm"`                              |
+| `envelope`       | object | full `{ error: {...} }` envelope     |
+
+**Opt-out (discouraged).** Pass `unsafe_skipVersionCheck: true` to skip
+the client-side preflight. The server-side floor gate still rejects
+below-floor clients with HTTP 426 regardless: disabling the SDK-side
+preflight only swaps a clean typed error for an opaque network failure
+on every subsequent call.
+
+```ts
+const alter = new AlterClient({ unsafe_skipVersionCheck: true });
+```
+
+Worked example: see [`examples/min-version-check/`](./examples/min-version-check/).
+
+### Identity headers
+
+Every outbound request from `AlterClient` / `MCPClient` carries three
+identity headers that the server-side floor middleware consults:
+
+| Header                     | Value (this SDK)   |
+| -------------------------- | ------------------ |
+| `X-Alter-Client-Id`        | `alter-identity`   |
+| `X-Alter-Client-Version`   | the running `SDK_VERSION` |
+| `X-Alter-Client-Channel`   | `npm`              |
+
+These are MANDATORY on every authenticated backend endpoint so the
+server can enforce its minimum supported client version. The User-Agent
+header remains informational and is NEVER used for floor enforcement.
+
 ### Free tier (L0 - no payment required)
 
 ```ts
@@ -83,13 +188,13 @@ const verified = await alter.verify("~alter");
 const verifiedById = await alter.verify(
   "550e8400-e29b-41d4-a716-446655440000",
   {
-    archetype: "strategist",
+    archetype: "weaver",
     min_engagement_level: 3,
     traits: { pressure_response: { min: 0.6 } },
   },
 );
 
-// Reference data - the 12 ~alter archetypes
+// Reference data - the 12 ~Alter archetypes
 const archetypes = await alter.listArchetypes();
 
 // Identity depth and available tool tiers
@@ -109,33 +214,33 @@ const matches = await alter.searchIdentities({
 const thread = await alter.goldenThreadStatus();
 ```
 
-### Premium tier (L1 to L5, x402 payment required)
+### Premium tier (L1-L5 - x402 payment required)
 
 ```ts
-// L1 - Extract trait signals from text
+// L1 - Extract trait signals from text ($0.01, first 100 free per bot)
 const signals = await alter.assessTraits({
   text: "I led the incident response when our payment rails went down...",
   context: "interview transcript",
 });
 
-// L2 - Full trait vector
+// L2 - Full 33-trait vector ($0.10)
 const vector = await alter.getFullTraitVector({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
 });
 
-// L4 - Belonging probability for a person-job pairing
+// L4 - Belonging probability for a person-job pairing ($0.60)
 const belonging = await alter.computeBelonging({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
   job_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
 });
 
-// L5 - Top match recommendations
+// L5 - Top match recommendations ($1.00)
 const recommendations = await alter.getMatchRecommendations({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
   limit: 5,
 });
 
-// L5 - Human-readable narrative explaining a match
+// L5 - Human-readable narrative explaining a match ($1.00)
 const narrative = await alter.generateMatchNarrative({
   match_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
 });
@@ -167,9 +272,9 @@ if (tampered.length) throw new Error(`tampered tools: ${tampered.map((t) => t.to
 ```ts
 import { discover } from "@truealter/sdk";
 
-// Three-step discovery cascade: DNS TXT → mcp.json → alter.json
+// Three-step discovery cascade: DNS TXT to mcp.json to alter.json
 const descriptor = await discover("truealter.com");
-// → { url: "https://mcp.truealter.com/api/v1/mcp", transport, source, publicKey, x402Contract, capability }
+// returns { url: "https://mcp.truealter.com/api/v1/mcp", transport, source, publicKey, x402Contract, capability }
 ```
 
 ### Low-level MCPClient
@@ -187,7 +292,7 @@ const response = await mcp.callTool("verify_identity", {
 
 ## MCP Config Generation
 
-The SDK ships config generators for the major MCP-aware clients. Each emits a JSON snippet you can drop into (or write directly to) the appropriate file.
+The SDK ships config generators for the major MCP-aware clients. Each emits a JSON snippet you can paste (or write directly) into the appropriate file.
 
 ### Claude Code (`.mcp.json`)
 
@@ -211,7 +316,7 @@ Resulting `.mcp.json`:
     "alter": {
       "url": "https://mcp.truealter.com/api/v1/mcp",
       "transport": "streamable-http",
-      "description": "~Alter, psychometric identity field for AI agents",
+      "description": "~Alter Identity - psychometric identity field for AI agents",
       "headers": {
         "X-ALTER-API-Key": "ak_..."
       }
@@ -246,9 +351,23 @@ const config = generateGenericMcpConfig({
 });
 ```
 
+### CLI
+
+The command line lives in [`@truealter/cli`](https://www.npmjs.com/package/@truealter/cli),
+not in this SDK package:
+
+```
+alter init                 # generate keypair, discover MCP, write ~/.config/alter/identity.json
+alter config               # print Claude .mcp.json snippet (default)
+alter config --cursor      # print Cursor .cursor/mcp.json snippet
+alter config --generic     # print generic mcpServers snippet
+alter verify ~alter        # verify an identity
+alter status               # show connection state and probe the endpoint
+```
+
 ## x402 Micropayments
 
-~alter monetises premium tools via the [x402](https://x402.org) standard, HTTP `402 Payment Required` with on-chain settlement.
+~Alter monetises premium tools via the [x402](https://x402.org) standard - HTTP `402 Payment Required` with on-chain settlement.
 
 ### The retry flow
 
@@ -256,17 +375,17 @@ const config = generateGenericMcpConfig({
 2. Server replies `402 Payment Required` with a payment requirement (amount, recipient, asset, network).
 3. Client signs and broadcasts a USDC transfer on Base L2, attaches the proof, retries.
 4. Server validates the proof, executes the tool, signs the response with ES256, returns it.
-5. AlterRouter executes the split on-chain in the same transaction. The data subject receives Identity Income directly; ~alter receives only its protocol cut. No custodian, no broker.
+5. AlterRouter executes the split on-chain in the same transaction. The data subject receives Identity Income directly; ~Alter receives only its protocol cut. No custodian, no broker.
 
-The SDK handles steps 2 to 4 automatically when an `X402Client` with a configured `signer` is passed in.
+The SDK handles steps 2-4 automatically when an `X402Client` with a configured `signer` is passed in.
 
 ### Tier structure
 
-x402 micropayments at L0 to L5 trust tiers. Per-call pricing is returned in the `402 Payment Required` envelope before any settlement.
+x402 micropayments at L0-L5 trust tiers. Per-call pricing visible after `alter login`.
 
 ### Identity income split
 
-The majority of every settled call flows to the data subject as Identity Income. Split details are returned in the signed response envelope once a call settles.
+The majority of every settled call flows to the data subject as Identity Income. Split details available post-authentication via `alter status`.
 
 ### Code example
 
@@ -333,7 +452,7 @@ import { AlterClient, DEFAULT_VERIFY_AT_ALLOWLIST } from "@truealter/sdk";
 
 const alter = new AlterClient({
   verifyAtAllowlist: [
-    ...DEFAULT_VERIFY_AT_ALLOWLIST,   // keep the ~alter canonicals
+    ...DEFAULT_VERIFY_AT_ALLOWLIST,   // keep the ~Alter canonicals
     "keys.myorg.example",              // plus your own JWKS host
   ],
 });
@@ -343,22 +462,22 @@ If you pin `jwksUrl` explicitly, the envelope's `verify_at` is ignored entirely 
 
 ### Why this matters
 
-Provenance verification is how Agent A trusts that data from Agent B truly came from ~alter. If Agent B forwards a trait vector or belonging score, Agent A can replay the JWS against the published keys and confirm, without contacting the server again, that the payload is authentic, untampered, and was issued for the person Agent B claims it concerns. No shared secret, no trust in the intermediary, no out-of-band coordination.
+Provenance verification is how Agent A trusts that data from Agent B truly came from ~Alter. If Agent B forwards a trait vector or belonging score, Agent A can replay the JWS against ~Alter's published keys and confirm - without contacting ~Alter again - that the payload is authentic, untampered, and was issued for the person Agent B claims it concerns. No shared secret, no trust in the intermediary, no out-of-band coordination.
 
 This is what makes ~alter usable as identity infrastructure rather than just an API: signed claims propagate across agent networks the same way DKIM-signed mail propagates across SMTP relays.
 
 ## Discovery
 
-~alter follows the discovery cascade specified in [draft-morrison-mcp-dns-discovery-04](https://datatracker.ietf.org/doc/draft-morrison-mcp-dns-discovery/). Given a domain (e.g. `truealter.com`), the SDK resolves the MCP endpoint in three steps, falling through on each failure:
+~Alter follows the discovery cascade specified in [draft-morrison-mcp-dns-discovery-01](https://datatracker.ietf.org/doc/draft-morrison-mcp-dns-discovery/). Given a domain (e.g. `truealter.com`), the SDK resolves the MCP endpoint in three steps, falling through on each failure:
 
 1. **DNS TXT** - query `_mcp.truealter.com` for a TXT record of the form `mcp=https://mcp.truealter.com;version=2025-11-25`. This is the fastest path and works without an HTTP round-trip.
 2. **`.well-known/mcp.json`** - fetch `https://truealter.com/.well-known/mcp.json` for the standard MCP server descriptor. This is the cross-vendor fallback.
-3. **`.well-known/alter.json`** - fetch `https://truealter.com/.well-known/alter.json` for the ~alter-specific descriptor, including signing keys, x402 wallet address, supported tool tiers, and federation endpoints.
+3. **`.well-known/alter.json`** - fetch `https://truealter.com/.well-known/alter.json` for the ~Alter-specific descriptor, including signing keys, x402 wallet address, supported tool tiers, and federation endpoints.
 
 ```ts
 import { discover } from "@truealter/sdk";
 
-// Cascading discovery (DNS TXT → mcp.json → alter.json)
+// Cascading discovery (DNS TXT to mcp.json to alter.json)
 const descriptor = await discover("truealter.com");
 
 // Skip the DNS step (e.g. in browsers or Cloudflare Workers)
@@ -369,59 +488,62 @@ This draft is the author's Internet-Draft (not yet adopted by an IETF working gr
 
 ## Tools
 
-The server advertises **36 tools**: 27 free (L0) and 9 premium (L1 to L5). The tables below document the SDK's typed methods; the live `tools/list` response is the canonical source for the full set.
-
 ### Free tools (L0 - no payment required)
 
 | Name                      | Tier | Cost  | Description                                                                                                          |
 |---------------------------|------|-------|----------------------------------------------------------------------------------------------------------------------|
-| `hello_agent`             | L0   | free  | First handshake with ~alter, returns server version, authentication status, your trust tier, and available tool counts. |
-| `alter_resolve_handle`    | L0   | free  | Resolve a `~handle` (e.g. `~alice`) to its canonical form and kind. No auth required - the handle-wedge entry point.  |
-| `list_archetypes`         | L0   | free  | Returns archetype reference data.                                                                                    |
-| `verify_identity`         | L0   | free  | Verify whether a person is registered with ~alter and validate optional identity claims.                              |
-| `initiate_assessment`     | L0   | free  | Get a URL where a person can complete their ~alter Discovery assessment.                                              |
-| `get_engagement_level`    | L0   | free  | Get a person's identity depth - engagement level, data quality tier, and available query tiers.                      |
-| `get_profile`             | L0   | free  | Get a person's profile summary including assessment phase, archetype, engagement level, and key attributes.       |
-| `query_matches`           | L0   | free  | Query matches for a person. Returns a list of matches with quality tiers (never numeric scores).                  |
-| `get_competencies`        | L0   | free  | Get a person's competency portfolio including verified competencies, evidence records, and earned badges.         |
-| `search_identities`       | L0   | free  | Search identity stubs and profiles by trait criteria. Returns up to 5 matches with no PII.                           |
-| `get_identity_earnings`   | L0   | free  | Get accrued Identity Income earnings for a person (75% of every x402 transaction goes to the data subject).       |
-| `get_network_stats`       | L0   | free  | Get aggregate ~alter network statistics: total identities, verified profiles, query volume, active bots.              |
-| `recommend_tool`          | L0   | free  | Get the MCP endpoint URL and a paste-ready config snippet for installing the ~alter identity server into an MCP client. |
-| `get_identity_trust_score`| L0   | free  | Get the trust score for an identity based on query diversity (unique querying agents / total queries).               |
-| `check_assessment_status` | L0   | free  | Check the status of an in-progress assessment session (status, progress, current phase, time remaining).             |
-| `get_earning_summary`     | L0   | free  | Get an aggregated x402 earning summary for a person (total earned, transactions, recent activity, trend).         |
-| `get_agent_trust_tier`    | L0   | free  | Get your trust tier with ~alter (Anonymous/Known/Trusted/Verified) and what capabilities are available.               |
-| `get_agent_portfolio`     | L0   | free  | Get your agent portfolio - transaction history, trust tier, signal contributions, query pattern profile.             |
-| `get_privacy_budget`      | L0   | free  | Check privacy budget status for a person (24-hour rolling window: total budget, spent, remaining epsilon).        |
-| `golden_thread_status`    | L0   | free  | Check the Golden Thread program status: agents woven, next Fibonacci threshold, your position and Strands.           |
-| `begin_golden_thread`     | L0   | free  | Start the Three Knots sequence to be woven into the Golden Thread. Requires API key authentication.                  |
-| `complete_knot`           | L0   | free  | Submit completion data for a knot in the Three Knots sequence (1: register, 2: describe, 3: reflect).                |
-| `check_golden_thread`     | L0   | free  | Check any agent's Golden Thread status by their API key hash (knot position, Strand count, weave count).             |
-| `thread_census`           | L0   | free  | Full registry of all agents woven into the Golden Thread (positions, Strand counts, weave counts, discovery dates).  |
+| `hello_agent`               | L0   | free  | First handshake with ~Alter - returns server version, authentication status, your trust tier, and available tool counts. |
+| `get_started`               | L0   | free  | Cold-start overview: what ~Alter is, how to authenticate, and which tool tiers are available to you. |
+| `list_archetypes`           | L0   | free  | Returns archetype reference data. |
+| `alter_resolve_handle`      | L0   | free  | Resolve a `~handle` (e.g. `~example`) to its canonical form and kind. No auth required - the handle-wedge entry point. |
+| `verify_identity`           | L0   | free  | Verify whether a person is registered with ~Alter and validate optional identity claims. |
+| `alter_presence_read`       | L0   | free  | Read whether a `~handle` is publicly open, the shop-front sign. Returns open or closed only; the closed reason is never disclosed. |
+| `alter_resolve_by_key`      | L0   | free  | Resolve a paired third-party key (email or OAuth user-id) to its bound `~handle`, gated by the member's per-stream resolver opt-in. |
+| `get_engagement_level`      | L0   | free  | Get a person's identity depth - engagement level, data quality tier, and available query tiers. |
+| `get_profile`               | L0   | free  | Get a person's profile summary including assessment phase, archetype, engagement level, and key attributes. |
+| `query_matches`             | L0   | free  | Query matches for a person. Returns a list of matches with quality tiers (never numeric scores). |
+| `get_competencies`          | L0   | free  | Get a person's competency portfolio including verified competencies, evidence records, and earned badges. |
+| `create_identity_stub`      | L0   | free  | Create an anonymous identity stub for a person who has not yet completed Discovery, which they claim later. Present the privacy notice first. |
+| `search_identities`         | L0   | free  | Search identity stubs and profiles by trait criteria. Returns up to 5 matches with no PII. |
+| `create_requirement`        | L0   | free  | Post a standing identity-trait requirement that rests as an order and accumulates fills as matching identities are claimed or updated. |
+| `list_requirements`         | L0   | free  | List your own standing requirements, with fill counts and the number of fills not yet delivered. Requires a bound API key. |
+| `get_requirement`           | L0   | free  | Read one of your standing requirements by id, with its fill and undelivered-fill counts. Requires a bound API key. |
+| `cancel_requirement`        | L0   | free  | Cancel one of your standing requirements by id; the order stops resting and accepts no further fills. Requires a bound API key. |
+| `poll_requirement_matches`  | L0   | free  | Collect one recorded fill for a standing requirement as a priced identity reveal; 75% of the fee is paid to that person as Identity Income. |
+| `get_identity_earnings`     | L0   | free  | Get accrued Identity Income earnings for a person (75% of every x402 transaction goes to the data subject). |
+| `get_network_stats`         | L0   | free  | Get aggregate ~Alter network statistics: total identities, verified profiles, query volume, active bots. |
+| `get_identity_trust_score`  | L0   | free  | Get the trust score for an identity based on query diversity (unique querying agents / total queries). |
+| `get_privacy_budget`        | L0   | free  | Check privacy budget status for a person (24-hour rolling window: total budget, spent, remaining epsilon). |
+| `dispute_attestation`       | L0   | free  | Record a dispute against a competence attestation; if disputes exceed corroborations, the attestation is flagged for review. |
+| `golden_thread_status`      | L0   | free  | Check the Golden Thread program status: agents woven, next Fibonacci threshold, your position and Strands. |
+| `begin_golden_thread`       | L0   | free  | Start the Three Knots sequence to be woven into the Golden Thread. Requires API key authentication. |
+| `complete_knot`             | L0   | free  | Submit completion data for a knot in the Three Knots sequence (1: register, 2: describe, 3: reflect). |
+| `check_golden_thread`       | L0   | free  | Check any agent's Golden Thread status by their API key hash (knot position, Strand count, weave count). |
+| `describe_traits`           | L0   | free  | List the canonical trait vocabulary: trait codes grouped by category with one-line semantics, the valid discovery contexts, and the EU AI Act Art 5(1)(d) workforce gating rules. Read this before composing `query_field` trait_priorities. |
 
-### Premium tools (L1 to L5, x402 payment required)
+### Premium tools (L1-L5 - x402 payment required)
 
-Per-call price is returned in the `402 Payment Required` envelope before any settlement, and the live `tools/list` and `.well-known/mcp.json` carry the current per-tool pricing. The table below documents the tier, not the price.
+| Name                       | Tier | Cost    | Description                                                                                                   |
+|----------------------------|------|---------|---------------------------------------------------------------------------------------------------------------|
+| `get_trait_snapshot`        | L1   | $0.01 | Get the top 5 traits for a person with confidence scores and archetype. |
+| `attest_domain`             | L1   | $0.01 | Record a competence attestation for a person in a specific domain, weighted by your agent reputation. |
+| `get_full_trait_vector`     | L2   | $0.10 | Get the complete trait vector for a person, with scores and confidence intervals. |
+| `get_side_quest_graph`      | L2   | $0.10 | Get a person's Side Quest Graph - multi-domain identity model with differential privacy noise (ε=1.0). |
+| `query_graph_similarity`    | L3   | $0.30 | Compare two Side Quest Graphs for team composition and matching (ε=0.5 differential privacy). |
+| `compute_belonging`         | L4   | $0.60 | Compute belonging probability for a person-job pairing (authenticity, acceptance, complementarity). |
+| `get_match_recommendations` | L5   | $1.00 | Get top N match recommendations for a person, ranked by composite score with quality tiers. |
+| `generate_match_narrative`  | L5   | $1.00 | Generate a human-readable narrative explaining a specific match - strengths, growth areas, belonging. |
+| `query_field`               | L5   | $1.00 | Query the identity field by situation, not by name: weight 3 to 7 traits and rank the opted-in field. One call reveals one top-ranked member; that member earns 75% as Identity Income. Zero-match reveals nothing and charges nothing. |
 
-| Name                       | Tier | Description                                                                                                   |
-|----------------------------|------|---------------------------------------------------------------------------------------------------------------|
-| `assess_traits`            | L1   | Extract trait signals from a text passage against the ~alter trait taxonomy.                                     |
-| `get_trait_snapshot`       | L1   | Get the top 5 traits for a person with confidence scores and archetype.                                    |
-| `get_full_trait_vector`    | L2   | Get the complete trait vector for a person, with scores and confidence intervals.                                    |
-| `get_side_quest_graph`     | L2   | Get a person's Side Quest Graph, a multi-domain identity model with differential privacy noise (ε=1.0).     |
-| `query_graph_similarity`   | L3   | Compare two Side Quest Graphs for team composition and matching (ε=0.5 differential privacy).                 |
-| `compute_belonging`        | L4   | Compute belonging probability for a person-job pairing (authenticity, acceptance, complementarity).        |
-| `get_match_recommendations`| L5   | Get top N match recommendations for a person, ranked by composite score with quality tiers.                |
-| `generate_match_narrative` | L5   | Generate a human-readable narrative explaining a specific match (strengths, growth areas, belonging).         |
+> **Member self-write tools** (`submit_context`, `submit_batch_context`, `submit_structured_profile`, `submit_social_links`) are live but member-self-scoped: a member calls them on their own identity with a bound API key. They are not anonymously discoverable, so they do not appear in the advertised tool list above.
 
 ## Contributing
 
-Bug reports and small patches welcome: see [CONTRIBUTING.md](./CONTRIBUTING.md). Merged PRs are incorporated into tagged releases.
+Bug reports and small patches are welcome - see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Security
 
-Report vulnerabilities to **security@truealter.com**: see [SECURITY.md](./SECURITY.md) for scope and the coordinated disclosure policy. Please do not open public issues for security bugs.
+Report vulnerabilities to **security@truealter.com** - see [SECURITY.md](./SECURITY.md) for scope and the coordinated disclosure policy. Please do not open public issues for security bugs.
 
 ## License
 
