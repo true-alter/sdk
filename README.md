@@ -88,13 +88,22 @@ import { AlterClient, X402Client } from "@truealter/sdk";
 
 const alter = new AlterClient({
   endpoint: "https://mcp.truealter.com/api/v1/mcp", // optional - this is the default; bare host returns 405
-  apiKey: process.env.ALTER_API_KEY,     // optional for free tier
   x402: new X402Client({                  // optional - only required for premium tools
     signer: yourViemOrEthersSigner,
     maxPerQuery: "0.10",
   }),
 });
 ```
+
+**Authentication.** The client above is anonymous, and every free L0 tool
+answers with no credential. For tools that act on your own identity
+(standing requirements, the Golden Thread, member self-writes), run
+`alter login` once: it provisions your member credential into the local
+session (`~/.config/alter/session.json`). The hosted endpoint is
+bearer-first, so the [`@truealter/cli`](https://www.npmjs.com/package/@truealter/cli)
+bridge reads that session credential for you; you never mint or paste a
+key. If you construct a client yourself, pass that same session
+credential as the optional `apiKey` option.
 
 ### Minimum-version preflight (required)
 
@@ -249,7 +258,7 @@ const narrative = await alter.generateMatchNarrative({
 ### Provenance verification
 
 ```ts
-// Every medium- and high-blast-radius response is signed with ES256.
+// Every medium- and high-sensitivity response is signed with ES256.
 // Verification is opt-in - call alter.verifyProvenance(...) yourself.
 const result = await alter.getFullTraitVector({
   member_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -302,7 +311,6 @@ import { writeFileSync } from "node:fs";
 
 const config = generateClaudeConfig({
   endpoint: "https://mcp.truealter.com/api/v1/mcp",
-  apiKey: process.env.ALTER_API_KEY,
 });
 
 writeFileSync(".mcp.json", JSON.stringify(config, null, 2));
@@ -316,14 +324,16 @@ Resulting `.mcp.json`:
     "alter": {
       "url": "https://mcp.truealter.com/api/v1/mcp",
       "transport": "streamable-http",
-      "description": "~Alter Identity - psychometric identity field for AI agents",
-      "headers": {
-        "X-ALTER-API-Key": "ak_..."
-      }
+      "description": "~Alter Identity - psychometric identity field for AI agents"
     }
   }
 }
 ```
+
+This config reaches every free L0 tool anonymously. For authenticated
+access, run `alter login` and let the CLI write the config
+(`alter config`); the bearer-first bridge then carries your session
+credential, so no key sits in the file.
 
 ### Cursor (`.cursor/mcp.json`)
 
@@ -333,7 +343,6 @@ import { writeFileSync } from "node:fs";
 
 const config = generateCursorConfig({
   endpoint: "https://mcp.truealter.com/api/v1/mcp",
-  apiKey: process.env.ALTER_API_KEY,
 });
 
 writeFileSync(".cursor/mcp.json", JSON.stringify(config, null, 2));
@@ -346,7 +355,6 @@ import { generateGenericMcpConfig } from "@truealter/sdk";
 
 const config = generateGenericMcpConfig({
   endpoint: "https://mcp.truealter.com/api/v1/mcp",
-  apiKey: process.env.ALTER_API_KEY,
   serverName: "alter", // editor-specific key under mcpServers
 });
 ```
@@ -430,7 +438,7 @@ If a quoted envelope exceeds `maxPerQuery`, uses an unallowed network, or names 
 
 ## Provenance Verification
 
-Every response from a medium- or high-blast-radius tool ships with an ES256 JWS in `_meta.provenance`. The signature covers a canonical JSON serialisation of the response payload, the tool name, the call timestamp, the requesting agent's key hash, and a monotonic sequence number.
+Every response from a medium- or high-sensitivity tool ships with an ES256 JWS in `_meta.provenance`. The signature covers a canonical JSON serialisation of the response payload, the tool name, the call timestamp, the requesting agent's key hash, and a monotonic sequence number.
 
 ```ts
 const result = await alter.getFullTraitVector({
@@ -506,9 +514,9 @@ This draft is the author's Internet-Draft (not yet adopted by an IETF working gr
 | `create_identity_stub`      | L0   | free  | Create an anonymous identity stub for a person who has not yet completed Discovery, which they claim later. Present the privacy notice first. |
 | `search_identities`         | L0   | free  | Search identity stubs and profiles by trait criteria. Returns up to 5 matches with no PII. |
 | `create_requirement`        | L0   | free  | Post a standing identity-trait requirement that rests as an order and accumulates fills as matching identities are claimed or updated. |
-| `list_requirements`         | L0   | free  | List your own standing requirements, with fill counts and the number of fills not yet delivered. Requires a bound API key. |
-| `get_requirement`           | L0   | free  | Read one of your standing requirements by id, with its fill and undelivered-fill counts. Requires a bound API key. |
-| `cancel_requirement`        | L0   | free  | Cancel one of your standing requirements by id; the order stops resting and accepts no further fills. Requires a bound API key. |
+| `list_requirements`         | L0   | free  | List your own standing requirements, with fill counts and the number of fills not yet delivered. Requires an authenticated member credential (`alter login`). |
+| `get_requirement`           | L0   | free  | Read one of your standing requirements by id, with its fill and undelivered-fill counts. Requires an authenticated member credential (`alter login`). |
+| `cancel_requirement`        | L0   | free  | Cancel one of your standing requirements by id; the order stops resting and accepts no further fills. Requires an authenticated member credential (`alter login`). |
 | `poll_requirement_matches`  | L0   | free  | Collect one recorded fill for a standing requirement as a priced identity reveal; 75% of the fee is paid to that person as Identity Income. |
 | `get_identity_earnings`     | L0   | free  | Get accrued Identity Income earnings for a person (75% of every x402 transaction goes to the data subject). |
 | `get_network_stats`         | L0   | free  | Get aggregate ~Alter network statistics: total identities, verified profiles, query volume, active bots. |
@@ -516,9 +524,9 @@ This draft is the author's Internet-Draft (not yet adopted by an IETF working gr
 | `get_privacy_budget`        | L0   | free  | Check privacy budget status for a person (24-hour rolling window: total budget, spent, remaining epsilon). |
 | `dispute_attestation`       | L0   | free  | Record a dispute against a competence attestation; if disputes exceed corroborations, the attestation is flagged for review. |
 | `golden_thread_status`      | L0   | free  | Check the Golden Thread program status: agents woven, next Fibonacci threshold, your position and Strands. |
-| `begin_golden_thread`       | L0   | free  | Start the Three Knots sequence to be woven into the Golden Thread. Requires API key authentication. |
+| `begin_golden_thread`       | L0   | free  | Start the Three Knots sequence to be woven into the Golden Thread. Requires an authenticated member credential (`alter login`). |
 | `complete_knot`             | L0   | free  | Submit completion data for a knot in the Three Knots sequence (1: register, 2: describe, 3: reflect). |
-| `check_golden_thread`       | L0   | free  | Check any agent's Golden Thread status by their API key hash (knot position, Strand count, weave count). |
+| `check_golden_thread`       | L0   | free  | Check any agent's Golden Thread status by their credential hash (knot position, Strand count, weave count). |
 | `describe_traits`           | L0   | free  | List the canonical trait vocabulary: trait codes grouped by category with one-line semantics, the valid discovery contexts, and the EU AI Act Art 5(1)(d) workforce gating rules. Read this before composing `query_field` trait_priorities. |
 
 ### Premium tools (L1-L5 - x402 payment required)
@@ -535,7 +543,7 @@ This draft is the author's Internet-Draft (not yet adopted by an IETF working gr
 | `generate_match_narrative`  | L5   | $1.00 | Generate a human-readable narrative explaining a specific match - strengths, growth areas, belonging. |
 | `query_field`               | L5   | $1.00 | Query the identity field by situation, not by name: weight 3 to 7 traits and rank the opted-in field. One call reveals one top-ranked member; that member earns 75% as Identity Income. Zero-match reveals nothing and charges nothing. |
 
-> **Member self-write tools** (`submit_context`, `submit_batch_context`, `submit_structured_profile`, `submit_social_links`) are live but member-self-scoped: a member calls them on their own identity with a bound API key. They are not anonymously discoverable, so they do not appear in the advertised tool list above.
+> **Member self-write tools** (`submit_context`, `submit_batch_context`, `submit_structured_profile`, `submit_social_links`) are live but member-self-scoped: a member calls them on their own identity with an authenticated member credential (`alter login`). They are not anonymously discoverable, so they do not appear in the advertised tool list above.
 
 ## Contributing
 
