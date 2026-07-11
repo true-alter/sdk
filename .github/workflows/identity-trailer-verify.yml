@@ -3,9 +3,9 @@
 # ALTER commits record WHO acted and WHAT drafted or executed the work, as git
 # trailers on the commit message:
 #
-#   Acted-By:      the person who owns the decision      (e.g. ~blake)
-#   Executed-By:   an automated agent that ran it        (e.g. ~releaser.bot)
-#   Drafted-With:  the instrument that drafted it        (e.g. ~cc-opus-4-8)
+#   Acted-By:      the person who owns the decision
+#   Executed-By:   an automated agent that ran it
+#   Drafted-With:  the instrument that drafted it
 #
 # The three slots are not interchangeable. A person is accountable, a bot is
 # operated, and an instrument is used: collapsing them would let an automated
@@ -13,10 +13,9 @@
 # to prevent. This job parses every commit in a pull request and fails when a
 # handle appears in a slot its kind may not occupy.
 #
-# Kinds are told apart syntactically:
-#   a `.bot` suffix marks an automated agent
-#   a provider prefix (~cc-, ~gpt-, ~claude-, ...) marks an instrument
-#   anything else is read as a person
+# Kinds are told apart syntactically: a bot handle carries a `.bot` suffix, an
+# instrument handle carries a model-provider prefix (the exact prefixes are
+# listed in the case statements below), and anything else is read as a person.
 #
 # A commit with no trailers is reported, not failed. Only a handle in the wrong
 # slot fails, because that is the case that misattributes authorship.
