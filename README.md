@@ -27,8 +27,9 @@ A thin client over the ~Alter MCP server (Streamable HTTP, JSON-RPC 2.0, MCP spe
 npm install @truealter/sdk
 ```
 
-Then import the client in your code (see the API section below). The
-day-to-day command line lives in
+Then import the client in your code (see the API section below), or
+run the working example: [`examples/hello-agent/`](./examples/hello-agent/)
+connects with no credential at all. The day-to-day command line lives in
 [`@truealter/cli`](https://www.npmjs.com/package/@truealter/cli):
 
 ```
