@@ -1,0 +1,13 @@
+src/
+tests/
+bin/
+tsconfig.json
+tsup.config.ts
+.gitignore
+.eslintrc*
+vitest.config*
+coverage/
+*.test.ts
+*.spec.ts
+dist/*.map
+dist/**/*.map

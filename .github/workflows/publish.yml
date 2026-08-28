@@ -1,0 +1,86 @@
+name: Publish
+
+# The npm publish for @truealter/sdk runs here, in this public repo, rather
+# than wherever the source is authored. npm provenance attestation binds to
+# the CI run's own OIDC identity, and that identity has to belong to a public
+# repository for the attestation to mean anything, so the publish step has to
+# live in one.
+#
+# What gets published is always export/main, whatever ref this workflow is
+# started from. That branch is written by automation only, as a squashed
+# snapshot of the release-ready source, and it is not this repo's default
+# branch. Do not push export/main by hand: every commit that reaches it has
+# already been built and checked upstream against that exact tree, and a
+# hand-pushed commit would skip all of it.
+#
+# The trigger is a dispatch rather than a push to export/main, because a
+# push-triggered workflow is read from the tree of the branch that was
+# pushed. export/main carries only the releasable source subset and no
+# .github/ at all, so this file is not on it and a push there would start
+# nothing. A dispatch resolves the workflow from the ref it is given, which
+# keeps this file on the default branch where it is reviewed and gated. The
+# upstream job dispatches it once its export push has succeeded, so a failed
+# export cannot reach npm.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: export/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm run typecheck
+
+      # NO `npm test` HERE, AND ITS ABSENCE IS THE DESIGN. The upstream export
+      # deliberately omits tests/ from the curated subset, on the stated
+      # grounds that a fixture is written to be realistic and that is exactly
+      # what makes it dangerous on a public repo, and that npm never ships
+      # tests either way because the package `files` field is an allowlist of
+      # dist/, README and LICENSE. So export/main carries no test files at all
+      # and vitest exits 1 on finding none. A test step here and a tests-free
+      # export are mutually unsatisfiable: this workflow had never completed a
+      # single run before 2026-08-12, and that contradiction is why. The suite
+      # runs upstream against this exact tree before the export is cut, which
+      # is the same reasoning this file's header already gives for trusting
+      # export/main at all, and typecheck and build below still run against
+      # the exported source. Restoring this step means exporting tests/ first.
+      # Anchor: finding-the-d-1-repointed-sdk-publish-chain-has-never-run-
+      # end-to-end-and-refuses-by-construction-2026-08-12.
+
+      - run: npm run build
+
+      - name: Pre-publish sanity (packed tarball has a real dist/)
+        run: |
+          set -euo pipefail
+          npm pack
+          tarball=$(ls truealter-sdk-*.tgz)
+          tmp=$(mktemp -d)
+          tar -xzf "$tarball" -C "$tmp"
+          if [ ! -d "$tmp/package/dist" ]; then
+            echo "::error::publish: packed SDK tarball has no package/dist. Refusing to publish."
+            exit 1
+          fi
+          rm -f "$tarball"
+
+      - name: Publish to npm
+        # This repo carries no secrets. Authentication is npm's OIDC trusted
+        # publishing, which is why the job needs id-token: write and no token.
+        # Trusted publishing is configured per package against one repository
+        # and one workflow path, so this file's path is part of that config.
+        run: npm publish --access public --provenance
