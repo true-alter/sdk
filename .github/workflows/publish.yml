@@ -21,9 +21,25 @@ name: Publish
 # keeps this file on the default branch where it is reviewed and gated. The
 # upstream job dispatches it once its export push has succeeded, so a failed
 # export cannot reach npm.
+#
+# IT IS A REPOSITORY DISPATCH, and declaring only workflow_dispatch here is
+# what broke this chain. sdk-publish.yml upstream sends
+# `gh api --method POST repos/true-alter/sdk/dispatches -f
+# event_type=sdk-export-published`, deliberately, because the loom-promote App
+# carries contents:write and actions:none and `gh workflow run` 403'd on every
+# release from 2026-08-12. A repository dispatch cannot start a workflow that
+# does not name that event, and it returns 204 either way, so the mismatch
+# fails silently and green; the upstream job's observe step is what turns it
+# red. This repo was recreated on 2026-08-28 and its seed carried a publish.yml
+# from before that redesign, which is how the two came apart. workflow_dispatch
+# stays for a maintainer running it by hand. Anchor:
+# lesson-a-lesson-rows-repaired-clause-outlived-the-repo-it-repaired-so-the-
+# cli-mirror-reads-as-having-a-publisher-it-has-never-had-2026-09-01.
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [sdk-export-published]
 
 permissions:
   id-token: write
