@@ -49,6 +49,15 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Job-level, so the widening is scoped to the one job that needs it and
+    # the workflow default above stays read. `contents: write` is what the
+    # release step below needs and nothing else here uses it. `id-token` is
+    # repeated because a job-level block REPLACES the workflow default rather
+    # than adding to it, and dropping it would silently break the OIDC that
+    # trusted publishing depends on.
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -100,3 +109,56 @@ jobs:
         # Trusted publishing is configured per package against one repository
         # and one workflow path, so this file's path is part of that config.
         run: npm publish --access public --provenance
+
+      - name: Cut the release this repo has never carried
+        # Measured 2026-09-01: true-alter/sdk held ZERO tags and ZERO releases.
+        # The npm `repository` field points here, so the page a reader reaches
+        # from the listing looked like a repo nobody had ever released. The
+        # same hole sits on true-alter/cli and on true-alter/runtime, and on
+        # the runtime it already blocks something. The 2026-08-26 ruling
+        # disowning the AUR package names "until the public mirror carries
+        # releases" as its own condition.
+        #
+        # THE TAG GOES ON export/main, WHICH IS NOT THIS REPO'S DEFAULT BRANCH.
+        # That is deliberate and it is what the checkout above already reads.
+        # export/main is the curated snapshot the publish is cut from, so it
+        # is the only ref where a tag names the bytes that reached npm.
+        #
+        # IDEMPOTENT. A re-dispatch on a version already tagged stands down
+        # rather than failing, which matters because the npm publish above is
+        # not idempotent and a re-run reaches here only after it succeeded.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release: ${tag} already exists, nothing to cut."
+            exit 0
+          fi
+          sha=$(git rev-parse HEAD)
+          notes=$(mktemp)
+          {
+            echo "\`@truealter/sdk@${version}\` is live on npm with provenance."
+            echo
+            echo '```'
+            echo "npm install @truealter/sdk"
+            echo '```'
+            # This version's CHANGELOG section, keyed on the version and NOT
+            # on position, because the newest section in these files is
+            # `## [Unreleased]` and taking it would put unreleased work in
+            # every release note. Absent file or absent section yields zero
+            # bytes and the release goes out with the install line alone;
+            # export/main carries only the curated subset, so the file may
+            # genuinely not be here.
+            if [ -f CHANGELOG.md ]; then
+              body=$(awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} f && /^## /{exit} f{print}' CHANGELOG.md)
+              if [ -n "$body" ]; then
+                echo
+                echo "$body"
+              fi
+            fi
+          } > "$notes"
+          gh release create "$tag" --title "$tag" --notes-file "$notes" --target "$sha"
+          echo "release: cut ${tag} at ${sha} on export/main."
