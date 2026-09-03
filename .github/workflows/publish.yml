@@ -1,5 +1,10 @@
 name: Publish
 
+# THE CUT IS STAGED, NOT PUBLISHED. A run stages the version and a maintainer
+# approves it with 2FA before it reaches installers, which is the only thing
+# this package's trusted publisher permits as of 2026-09-03. The reasoning
+# sits on the staging step rather than being repeated here.
+#
 # The npm publish for @truealter/sdk runs here, in this public repo, rather
 # than wherever the source is authored. npm provenance attestation binds to
 # the CI run's own OIDC identity, and that identity has to belong to a public
@@ -72,16 +77,25 @@ jobs:
       # exchange with the registry arrived in 11.5.1, and this step makes the
       # version a fact in the log rather than something a later reader has to
       # go and find. true-alter/cli runs the same step and stages cleanly
-      # under npm 12.0.2. This job's last failure ran under the bundled
-      # 11.17.0, which already clears that floor, so the npm version is NOT
-      # the cause here and pinning it is what takes that answer off the table
+      # under npm 12.0.2. The 2026-09-03 failure ran under the bundled
+      # 11.17.0, which already clears that floor, so the npm version was NOT
+      # the cause there and pinning it is what takes that answer off the table
       # rather than what fixes anything.
-      - name: Say which npm is publishing, and hold it above the OIDC floor
+      #
+      # STAGING RAISES THE FLOOR TO 11.15.0, so the `stage` command is
+      # asserted rather than hoped for. A too-old npm treats it as an unknown
+      # argument and fails late with a message about the argument instead of
+      # about the version.
+      - name: Say which npm is publishing, and meet staged publishing's floor
         run: |
           set -euo pipefail
           npm install -g npm@latest
           npm --version
           node --version
+          npm stage --help >/dev/null 2>&1 || {
+            echo "::error::publish: this npm has no stage command. Needs 11.15.0 or newer."
+            exit 1
+          }
 
       - run: npm install --no-audit --no-fund
 
@@ -116,13 +130,38 @@ jobs:
             echo "::error::publish: packed SDK tarball has no package/dist. Refusing to publish."
             exit 1
           fi
-          rm -f "$tarball"
+          rm -rf "$tmp"
+          # The tarball is KEPT now, where it used to be deleted. `npm stage
+          # publish` takes the tarball as its argument, so the bytes checked
+          # here are the bytes that go to the registry. Deleting it and
+          # letting the stage step re-pack would put a second, unchecked
+          # tarball on the wire.
 
-      - name: Publish to npm
+      - name: Stage the cut for approval
         # This repo carries no secrets. Authentication is npm's OIDC trusted
         # publishing, which is why the job needs id-token: write and no token.
         # Trusted publishing is configured per package against one repository
         # and one workflow path, so this file's path is part of that config.
+        #
+        # THE CUT IS STAGED, NOT PUBLISHED, AND THAT IS NOW THE ONLY THING THE
+        # BINDING PERMITS. ~blake set @truealter/sdk's trusted publisher to
+        # `npm stage publish` only on 2026-09-03, in his own words "i just
+        # changed sdk to npm stage publish only". A plain `npm publish` under
+        # that binding is refused with `403 OIDC permission denied for this
+        # action`, which is exactly what @truealter/mcp-ollama hit on run
+        # 33718660831 before it took this shape. So this is a fix for a
+        # configuration that is already live, not a consistency change.
+        #
+        # IT CHANGES RELEASE SEMANTICS AND THAT IS THE POINT. A staged cut
+        # reaches installers only when a maintainer approves it with 2FA, so
+        # no SDK version goes live unattended. `@truealter/cli` and
+        # `@truealter/mcp-ollama` already hold this posture and the SDK was the
+        # last one that did not.
+        #
+        # `StagePublish` extends `Publish` with `static stage = true`, so it
+        # inherits the same `oidc()` call and the same `--provenance` support.
+        # The staging path is not a second, weaker route, and everything the
+        # exchange commentary below says still applies to it unchanged.
         #
         # --loglevel verbose IS THE POINT OF THIS STEP AND IS NOT DEBUG RESIDUE.
         # npm attempts the OIDC exchange unconditionally and it is written never
@@ -155,16 +194,32 @@ jobs:
         # package-not-found-while-mcp-ollama-403s-permission-denied-so-the-two-
         # refusals-are-different-and-the-staged-shape-answers-only-one-
         # 2026-09-03, which records this rung as owed.
+        #
+        # IDEMPOTENT ON THE LIVE SIDE ONLY. A re-dispatch on a version already
+        # live stands down. A version already sitting in the stage is NOT
+        # handled, deliberately: `npm stage list`'s output shape has not been
+        # observed from this repository and inventing a parse for it would be
+        # a guess in the one step that must not guess. A duplicate stage fails
+        # with the registry's own message, which is legible.
         run: |
           set -uo pipefail
+          version=$(node -p "require('./package.json').version")
+          if npm view "@truealter/sdk@${version}" version >/dev/null 2>&1; then
+            echo "@truealter/sdk@${version} is already live on the registry, nothing to stage."
+            exit 0
+          fi
+          tarball=$(ls truealter-sdk-*.tgz)
           status=0
-          npm publish --access public --provenance --loglevel verbose \
-            > publish.log 2>&1 || status=$?
+          npm stage publish "$tarball" --access public --provenance --tag latest \
+            --loglevel verbose > publish.log 2>&1 || status=$?
           cat publish.log
           if grep -q 'Failed token exchange request' publish.log; then
             line=$(grep -m1 'Failed token exchange request' publish.log)
             echo "::error::publish: the registry REFUSED the OIDC exchange, so npm fell through to an unauthenticated PUT and the status below describes that retry, not the fault. ${line}"
             exit 1
+          fi
+          if [ "$status" -eq 0 ]; then
+            echo "publish: staged ${version} with tag latest. It is NOT live until approved with 2FA."
           fi
           exit "$status"
 
@@ -183,8 +238,13 @@ jobs:
         # is the only ref where a tag names the bytes that reached npm.
         #
         # IDEMPOTENT. A re-dispatch on a version already tagged stands down
-        # rather than failing, which matters because the npm publish above is
-        # not idempotent and a re-run reaches here only after it succeeded.
+        # rather than failing, which matters because the stage above is not
+        # idempotent and a re-run reaches here only after it succeeded.
+        #
+        # THE RELEASE IS CUT EVEN THOUGH THE NPM CUT IS ONLY STAGED. The tag
+        # records which source was cut, which is true the moment the export
+        # lands and stays true whether or not the stage is approved, and the
+        # body says plainly whether installers have it yet.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -195,10 +255,15 @@ jobs:
             echo "release: ${tag} already exists, nothing to cut."
             exit 0
           fi
+          if npm view "@truealter/sdk@${version}" version >/dev/null 2>&1; then
+            state="is live on npm with provenance."
+          else
+            state="is staged on npm and reaches installers when a maintainer approves it with 2FA."
+          fi
           sha=$(git rev-parse HEAD)
           notes=$(mktemp)
           {
-            echo "\`@truealter/sdk@${version}\` is live on npm with provenance."
+            echo "\`@truealter/sdk@${version}\` ${state}"
             echo
             echo '```'
             echo "npm install @truealter/sdk"
@@ -220,3 +285,27 @@ jobs:
           } > "$notes"
           gh release create "$tag" --title "$tag" --notes-file "$notes" --target "$sha"
           echo "release: cut ${tag} at ${sha} on export/main."
+
+      - name: Say what is now waiting on a human
+        # A staged cut that nobody is told about sits in the stage until it is
+        # forgotten. This is the only place the run says out loud that the
+        # version is not on installers' machines yet, and it stays silent once
+        # the version is live so a re-dispatch does not read as a fresh ask.
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          if npm view "@truealter/sdk@${version}" version >/dev/null 2>&1; then
+            exit 0
+          fi
+          {
+            echo "### @truealter/sdk ${version} is staged, not published"
+            echo
+            echo "It reaches installers only when you approve it with 2FA:"
+            echo
+            echo '```'
+            echo "npm stage list @truealter/sdk"
+            echo "npm stage view <stage-id>       # inspect before approving"
+            echo "npm stage approve <stage-id>    # prompts for 2FA, publishes"
+            echo "npm stage reject <stage-id>     # discard"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
