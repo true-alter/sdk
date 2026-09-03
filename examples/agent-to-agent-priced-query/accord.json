@@ -1,0 +1,56 @@
+{
+  "_comment": "Minimal Alter Accord envelope. JSON mirror of the normative CBOR/COSE form spelled out in draft-morrison-identity-accord-00 (Alter Accord Implementation Plan §Normative). Both parties sign the canonical serialisation with their Instrument-tier Ed25519 key; signatures are appended in `signatures[]` at handshake time, not stored in this template.",
+  "protocol": "identity-accord/0.1",
+  "draft": "draft-morrison-identity-accord-00",
+  "accord_type": "priced-query-handshake",
+  "accord_id": "PLACEHOLDER-uuid-v4-set-at-handshake-time",
+  "parties": [
+    {
+      "role": "requester",
+      "handle": "~yourhandle",
+      "tier": "Instrument",
+      "id8_role": "Drafted-With",
+      "public_key": "ed25519:PLACEHOLDER"
+    },
+    {
+      "role": "provider",
+      "handle": "~example",
+      "tier": "Instrument",
+      "id8_role": "Drafted-With",
+      "public_key": "ed25519:PLACEHOLDER"
+    }
+  ],
+  "scope": {
+    "tool": "compute_belonging",
+    "tier": "L2",
+    "priced_amount": "0.01",
+    "asset": "USDC",
+    "network": "base-sepolia",
+    "max_calls_per_accord": 1,
+    "ttl_seconds": 300
+  },
+  "consent_gates": {
+    "member_data": false,
+    "passive_signals": false,
+    "agent_to_agent_metadata": true,
+    "note": "D-CO23 agent-to-agent metadata exclusion is PENDING ratification (flagged in standup-as-category-deep-dive Part IV). Until ratified, this flag is illustrative; production accords must re-validate the consent gates against the live Decision Register."
+  },
+  "split": {
+    "policy": "canonical-revenue-split-75-15-5-5-org-is-facilitator-slot",
+    "member_bps": 7500,
+    "facilitator_bps": 500,
+    "alter_bps": 1500,
+    "cooperative_bps": 500,
+    "note": "75/5/15/5 = 10000 bps. Agent-to-agent flows with no member re-route the 7500 bps member share per the pending D-CO23 DR entry. Until ratified, split math is illustrative-only."
+  },
+  "revocation": {
+    "mode": "immediate",
+    "channel": "either-party",
+    "on_revoke": "reject-further-calls-sign-revocation-receipt"
+  },
+  "replay_protection": {
+    "nonce_required": true,
+    "receipt_max_age_seconds": 120
+  },
+  "signatures": []
+}
