@@ -137,7 +137,36 @@ jobs:
         # there at 0.5.10. Run 33697926979 is exactly that and it named nothing:
         # no OIDC line appears anywhere in its log. Verbose is what turns the
         # registry's own rejection message into something the log says out loud.
-        run: npm publish --access public --provenance --loglevel verbose
+        #
+        # VERBOSE MADE THE CAUSE PRINTABLE. THE ASSERTION BELOW MAKES IT THE
+        # VERDICT. Run 33719652547 on 2026-09-03 printed
+        # `npm verbose oidc Failed token exchange request with body message:
+        # OIDC token exchange error - package not found`, and then failed with
+        # `404 Not Found - PUT`, which is the unauthenticated retry rather than
+        # the fault. Three sessions across two days diagnosed that second
+        # failure, because the step's exit status describes the retry and says
+        # nothing about the exchange. So the log is captured, replayed in full,
+        # and searched for the exchange's own refusal, which is reported as the
+        # error whatever npm's own status happens to be.
+        #
+        # The capture keeps the step's real status for every other failure, so
+        # a genuine publish error still fails with its own message and this
+        # adds nothing to it. Anchor: finding-the-sdk-oidc-exchange-404s-
+        # package-not-found-while-mcp-ollama-403s-permission-denied-so-the-two-
+        # refusals-are-different-and-the-staged-shape-answers-only-one-
+        # 2026-09-03, which records this rung as owed.
+        run: |
+          set -uo pipefail
+          status=0
+          npm publish --access public --provenance --loglevel verbose \
+            > publish.log 2>&1 || status=$?
+          cat publish.log
+          if grep -q 'Failed token exchange request' publish.log; then
+            line=$(grep -m1 'Failed token exchange request' publish.log)
+            echo "::error::publish: the registry REFUSED the OIDC exchange, so npm fell through to an unauthenticated PUT and the status below describes that retry, not the fault. ${line}"
+            exit 1
+          fi
+          exit "$status"
 
       - name: Cut the release this repo has never carried
         # Measured 2026-09-01: true-alter/sdk held ZERO tags and ZERO releases.
