@@ -59,14 +59,29 @@ jobs:
       id-token: write
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: export/main
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+
+      # The npm a Node image happens to carry is not a floor. npm's OIDC
+      # exchange with the registry arrived in 11.5.1, and this step makes the
+      # version a fact in the log rather than something a later reader has to
+      # go and find. true-alter/cli runs the same step and stages cleanly
+      # under npm 12.0.2. This job's last failure ran under the bundled
+      # 11.17.0, which already clears that floor, so the npm version is NOT
+      # the cause here and pinning it is what takes that answer off the table
+      # rather than what fixes anything.
+      - name: Say which npm is publishing, and hold it above the OIDC floor
+        run: |
+          set -euo pipefail
+          npm install -g npm@latest
+          npm --version
+          node --version
 
       - run: npm install --no-audit --no-fund
 
@@ -108,7 +123,21 @@ jobs:
         # publishing, which is why the job needs id-token: write and no token.
         # Trusted publishing is configured per package against one repository
         # and one workflow path, so this file's path is part of that config.
-        run: npm publish --access public --provenance
+        #
+        # --loglevel verbose IS THE POINT OF THIS STEP AND IS NOT DEBUG RESIDUE.
+        # npm attempts the OIDC exchange unconditionally and it is written never
+        # to throw: every way it can fail returns undefined behind a log.verbose
+        # or log.silly line that a default run never prints (npm/cli, lib/utils/
+        # oidc.js). setup-node writes an .npmrc reading
+        # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN} and, with no secret
+        # to fill it, sets that variable to the literal placeholder
+        # XXXXX-XXXXX-XXXXX-XXXXX. So a refused exchange does not stop the step,
+        # it falls through to publishing under a placeholder token, and the
+        # registry answers `404 Not Found - PUT` on a package that is plainly
+        # there at 0.5.10. Run 33697926979 is exactly that and it named nothing:
+        # no OIDC line appears anywhere in its log. Verbose is what turns the
+        # registry's own rejection message into something the log says out loud.
+        run: npm publish --access public --provenance --loglevel verbose
 
       - name: Cut the release this repo has never carried
         # Measured 2026-09-01: true-alter/sdk held ZERO tags and ZERO releases.
