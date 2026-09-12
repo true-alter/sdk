@@ -132,6 +132,17 @@ EXCLUDE_FRAGMENTS = (
     "/.venv/",
     "/venv/",
     "/site-packages/",
+    # THE INSTRUMENT IS NOT A MODULE OF THE REPO IT GUARDS. Once the sweep is
+    # installed into a sibling by scripts/install-consumer-sweep-sibling.sh, its
+    # own file sits in that repo's scripts/ and the analyser reads it as ordinary
+    # source. Every generic identifier it defines then becomes an anchor: the
+    # arming commit in alter-messenger was refused on `relative`, defined here
+    # and coincidentally used in alter_messenger/window.py, which is a name
+    # collision and not a consumer relationship. Left in, the gate refuses its
+    # own installation in any repo sharing a common word with it, and every such
+    # refusal is discharged on sight, which is exactly how a gate teaches the
+    # reader to stop reading the list.
+    "consumer-sweep.py",
 )
 
 # An identifier shorter than this is noise in every language here.
