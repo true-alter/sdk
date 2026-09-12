@@ -102,7 +102,15 @@ import time
 # Every number here is a precision/recall dial. They are named and gathered so a
 # later session tunes them against the events log rather than re-deriving them.
 
-CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx", ".sol", ".go", ".rs")
+# `.kt` joined on 2026-09-12 by ~blake's selection. alter-android holds 255
+# non-test Kotlin files, and across all 24 sibling repos every other language
+# this analyser cannot read amounts to one stray file each, so Kotlin was the
+# whole of the unreached surface rather than a slice of it. Adding it needs no
+# parser: the analyser matches identifiers and file stems, so the cost is this
+# entry, the `fun`/`object` keywords and `val`/`var` declaration shape below,
+# and Kotlin's own test-path conventions in EXCLUDE_FRAGMENTS, which none of the
+# existing test fragments matched.
+CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx", ".sol", ".go", ".rs", ".kt")
 
 # Paths whose consumers are not the kind this class is about. A test that reads
 # the changed symbol is EXPECTED to be left alone by a behaviour change, and
@@ -132,6 +140,15 @@ EXCLUDE_FRAGMENTS = (
     "/.venv/",
     "/venv/",
     "/site-packages/",
+    # Kotlin's test conventions, which none of the fragments above reach. Gradle
+    # puts unit tests under src/test/ and instrumented tests under
+    # src/androidTest/, both SINGULAR, and the class file is named <Thing>Test.kt
+    # rather than test_<thing>. Without these three, every Android test file
+    # counts as a consumer and the gate's first fire in that repo puts a list of
+    # tests in front of a reader, which is how a gate gets ignored.
+    "/test/",
+    "/androidTest/",
+    "Test.kt",
     # THE INSTRUMENT IS NOT A MODULE OF THE REPO IT GUARDS. Once the sweep is
     # installed into a sibling by scripts/install-consumer-sweep-sibling.sh, its
     # own file sits in that repo's scripts/ and the analyser reads it as ordinary
@@ -219,12 +236,27 @@ TRAILER_RE = re.compile(r"^\s*consumers[-_ ]considered\s*:\s*(.*)$", re.IGNORECA
 def _definition_patterns(symbol: str) -> list[re.Pattern]:
     s = re.escape(symbol)
     return [
+        # THE MODIFIER PREFIX IS A REPEATED GROUP rather than a fixed sequence,
+        # because Kotlin stacks them and does not fix their order: `internal
+        # sealed class`, `private suspend fun`, `data class` all appear. The
+        # previous fixed three-slot form matched the six orderings it listed and
+        # nothing else, so widening it is what lets `fun` and `object` be read
+        # at all. Every keyword the old form accepted is still accepted here.
         re.compile(
-            r"^\s*(export\s+)?(default\s+)?(public\s+|private\s+|internal\s+|external\s+)?"
-            r"(async\s+)?(abstract\s+)?"
-            r"(def|class|function|struct|interface|type|enum|event|trait|impl|fn|contract|library)\s+"
-            + s
-            + r"\b"
+            r"^\s*(?:(?:export|default|public|private|protected|internal|external"
+            r"|open|sealed|data|inner|value|abstract|async|suspend|override"
+            r"|final|static|const|lateinit|actual|expect)\s+)*"
+            r"(def|class|function|struct|interface|type|enum|event|trait|impl|fn"
+            r"|fun|object|contract|library)\s+" + s + r"\b"
+        ),
+        # Kotlin's declaration shape for a value. Bounded to four spaces of
+        # indentation for the same reason the ORM column shape below is: a `val`
+        # inside a function body is a LOCAL, and counting locals as definitions
+        # is what took the measured fire rate to 76% of real commits. A top-level
+        # declaration sits at column zero and a class property at four.
+        re.compile(
+            r"^\s{0,4}(?:(?:public|private|protected|internal|const|lateinit"
+            r"|open|override|final|actual|expect)\s+)*(?:val|var)\s+" + s + r"\b"
         ),
         # Module-level binding, COLUMN ZERO ONLY. An indented `NAME = ...` is a
         # local, and treating locals as definitions is what took the measured
@@ -384,7 +416,18 @@ def module_linkage(
     "Names the module" is an import in Python, TypeScript, Go and Rust, and in
     Solidity it is either an import or a call through the contract type, which is
     why the bare stem counts and not only an import line. The stem is the file's
-    basename without its suffix, which is the module name in every language here.
+    basename without its suffix, which is the module name in those languages.
+
+    KOTLIN BREAKS THAT ASSUMPTION AND IS HANDLED SEPARATELY. A Kotlin file's name
+    carries no meaning: two files in the same `package` see each other with no
+    import and no mention of the other's filename, and a file may declare
+    anything regardless of what it is called. Running the stem rule over `.kt`
+    therefore returns an empty linkage for the ordinary case, which does not read
+    as a bug: the gate simply never fires, and a gate that never fires is
+    indistinguishable from a clean repo. So for Kotlin the unit is the PACKAGE,
+    which is what actually governs visibility, and that is read from the files
+    rather than inferred from their paths, because Gradle source roots mean the
+    directory and the package routinely disagree.
     """
     linkage: dict[str, set[str]] = {d: set() for d in definers}
     if not definers:
@@ -433,7 +476,55 @@ def module_linkage(
     for definer, files in list(linkage.items()):
         if len(files) > STEM_DISCRIMINATION_CEILING:
             linkage[definer] = set()
+
+    kotlin = [d for d in definers if d.endswith(".kt")]
+    if kotlin:
+        packages = kotlin_packages(cwd, timeout, ref)
+        for definer in kotlin:
+            own = packages.get(definer)
+            if not own:
+                continue
+            same = {p for p, pkg in packages.items() if pkg == own and p != definer}
+            # The same ceiling, for the same reason. A package holding more files
+            # than this is a bucket rather than a unit, and "in the same package"
+            # stops being evidence of a relationship.
+            if len(same) > STEM_DISCRIMINATION_CEILING:
+                continue
+            linkage[definer] = linkage.get(definer, set()) | same
     return linkage
+
+
+def kotlin_packages(cwd: str, timeout: float, ref: str | None = None) -> dict[str, str]:
+    """Kotlin file path -> its declared package, read from the file itself.
+
+    Read rather than derived from the directory: Gradle source roots
+    (app/src/main/java/...) mean the path prefix and the package disagree in
+    every Android project, so a path-derived package would put every file in its
+    own bucket and link nothing.
+    """
+    out = _git(
+        ["grep", "-I", "-n", "-E", "-e", r"^\s*package\s+[A-Za-z_]"]
+        + ([ref] if ref else [])
+        + ["--", "*.kt"],
+        cwd,
+        timeout,
+    )
+    packages: dict[str, str] = {}
+    for row in out.splitlines():
+        if ref:
+            if not row.startswith(ref + ":"):
+                continue
+            row = row[len(ref) + 1 :]
+        parts = row.split(":", 2)
+        if len(parts) < 3:
+            continue
+        path, _lineno, text = parts
+        if not is_code_path(path) or path in packages:
+            continue
+        declared = text.strip().split(None, 1)
+        if len(declared) == 2:
+            packages[path] = declared[1].strip().rstrip(";")
+    return packages
 
 
 def parse_named(message: str) -> list[str]:
