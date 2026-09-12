@@ -567,7 +567,27 @@ def parse_named(message: str) -> list[str]:
         match = TRAILER_RE.match(line)
         if not match:
             continue
-        without_reasons = re.sub(r"\([^)]*\)", "", match.group(1))
+        # STRIP ONLY WHERE A SPACE PRECEDES THE BRACKET. Requiring the space is
+        # what separates an annotation from a path segment: a Next.js route
+        # group spells a directory as (public), so the unanchored stripper that
+        # stood here ate a segment out of the path and left app//page.tsx, which
+        # names no file. Every public page in the monorepo lives under such a
+        # segment, so the escape was unavailable on exactly the surfaces a copy
+        # change touches. A trailing group left unclosed at end of line is
+        # dropped too, because that is the same annotation with the bracket
+        # missing rather than a path.
+        #
+        # PORTED, NOT REBUILT, from skein/collectives-drew-register commit
+        # 30d02bc9fd6f, which found and fixed this and still owns the rest of
+        # its work. Only the comma-ordering half of that fix reached
+        # origin/staging, so this half was live here and was being copied into
+        # every sibling repo this branch arms. Expect a trivial conflict in this
+        # function when that branch lands; the two are the same fix.
+        # Anchor: lesson-a-gate-advertised-an-escape-its-own-parser-could-not-
+        # read-so-the-only-discharge-was-a-reason-with-no-comma-and-a-path-with-
+        # no-route-group-2026-09-11
+        without_reasons = re.sub(r"\s+\([^)]*\)", "", match.group(1))
+        without_reasons = re.sub(r"\s+\([^)]*$", "", without_reasons)
         for chunk in without_reasons.split(","):
             cleaned = chunk.strip().strip("`'\"")
             if cleaned:
