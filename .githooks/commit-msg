@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# commit-msg, the sibling dispatcher installed from the alter monorepo by
+# scripts/install-consumer-sweep-sibling.sh. Refresh it from there rather than
+# editing in place; a local edit is lost on the next install.
+set -uo pipefail
+MSG_FILE="${1:-}"
+[ -n "$MSG_FILE" ] || exit 0
+
+# --- consumer-sweep (installed by install-consumer-sweep-sibling.sh) ---
+_CMS_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$_CMS_DIR/commit-msg-consumer-sweep" ]; then
+    bash "$_CMS_DIR/commit-msg-consumer-sweep" "$MSG_FILE" || exit 1
+fi
+exit 0

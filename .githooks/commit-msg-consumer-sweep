@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# commit-msg-consumer-sweep: the consumer sweep, run as a commit-msg module.
+#
+# Invoked from .githooks/commit-msg as a plain sibling script, the same rung as
+# the pre-commit guards, so the analysis and the register gate stay separate
+# concerns in separate files.
+#
+# WHY commit-msg AND NOT pre-commit. The naming escape lives in the commit
+# message ("Consumers-considered: <paths>"), and pre-commit cannot see it. The
+# analysis needs the staged tree AND the message together, and commit-msg is the
+# only stage holding both.
+#
+# FAIL OPEN on anything that means the check could not run: no python3, no
+# analyser file, an unreadable repo. FAIL CLOSED only on a real finding. A
+# commit hook that can wedge gets disabled and then guards nothing.
+#
+# Basis: blake-selection-the-consumer-sweep-becomes-a-mechanical-gate-because-
+# the-fix-the-named-surface-and-miss-the-real-one-class-recurred-twice-in-one-
+# session-2026-09-09.
+#
+# Portable: bash 3.2 (stock macOS), no GNU-only binaries.
+
+set -uo pipefail
+
+MSG_FILE="${1:-}"
+[ -n "$MSG_FILE" ] || exit 0
+[ -f "$MSG_FILE" ] || exit 0
+
+command -v python3 >/dev/null 2>&1 || exit 0
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+SWEEP="$REPO_ROOT/scripts/consumer-sweep.py"
+
+# Sibling repos install a subset of this hooks directory and carry no analyser.
+# Inventing a failure there would wedge them for a check they never opted into.
+[ -f "$SWEEP" ] || exit 0
+
+# A merge in progress is not an authored change; its consumer set belongs to the
+# commits being merged.
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || echo ".git")
+[ -f "$GIT_DIR/MERGE_HEAD" ] && exit 0
+
+python3 "$SWEEP" --repo "$REPO_ROOT" --message-file "$MSG_FILE"
