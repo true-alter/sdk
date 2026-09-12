@@ -4,9 +4,24 @@
 #   deliberately left alone.
 # EFFECTIVENESS_METRIC: every fire, every discharge and every skip is appended
 #   to ~/.local/share/alter/cc/consumer-sweep-gate/events.log, so the fire rate
-#   and the escape rate are both measurable rather than argued about. A gate
-#   whose discharge rate approaches 1.0 is crying wolf and the log is what
-#   shows it.
+#   and the escape rate are both measurable rather than argued about.
+#
+#   A DISCHARGE IS THE GATE SUCCEEDING, NOT THE GATE CRYING WOLF. ~blake ruled
+#   the reading on 2026-09-12, and the earlier line here saying a rate
+#   approaching 1.0 is crying wolf is STRUCK, because it counted the gate's
+#   intended outcome as a failure. The only work this gate demands is READING
+#   the list of other consumers; naming one you then decided to leave alone is
+#   that work having been done, and the refusal prints the trailer ready-made
+#   precisely so the reading is the whole cost.
+#
+#   SO THE RATE IS NOT THE HEALTH SIGNAL, and this file should not be tuned
+#   against it. The signal is whether a discharge was CONSIDERED or REFLEXIVE,
+#   and THE LOG CANNOT TELL THOSE APART: it records that a commit was refused
+#   and then discharged, never whether the commit changed as a result. Stated as
+#   a known limit rather than repaired here, because adding a field to a log
+#   eleven repos now write into is a shape decision and not a defect repair.
+#   Measured for the record, over the monorepo alone between 2026-09-09 and
+#   2026-09-12: 60 refusals, 44 discharges, 4 bounded.
 # SCOPE_PREDICATE: commit-msg stage, staged diff touches a code file that is
 #   not a test/fixture/migration, an anchor symbol on a changed line is defined
 #   in the repo and read by 2..FANOUT_CEILING non-test modules, and at least one
