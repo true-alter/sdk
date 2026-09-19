@@ -1,7 +1,7 @@
 {
   "name": "@truealter/sdk",
   "version": "0.5.8",
-  "description": "~Alter Identity SDK: verify a human is known, read inferred traits, register an agent identity, from any JavaScript or TypeScript environment",
+  "description": "TypeScript client for the ~Alter identity rail. Verify someone is known, read inferred traits, and settle premium reads in USDC from your own code. Apache-2.0.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -60,10 +60,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/true-alter/alter-identity.git"
+    "url": "https://github.com/true-alter/sdk.git"
   },
   "homepage": "https://truealter.com",
   "bugs": {
-    "url": "https://github.com/true-alter/alter-identity/issues"
+    "url": "https://github.com/true-alter/sdk/issues"
   }
 }
