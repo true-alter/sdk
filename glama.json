@@ -1,0 +1,8 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "maintainers": [
+    "maxchop",
+    "true-alter"
+  ],
+  "description": "A typed TypeScript client for the ~Alter identity rail. Verify someone is known, read inferred traits and settle premium reads in USDC from your own code.\n\nThis package is a library, not something you install to use ~Alter. For that, install @truealter/cli, which carries the MCP bridge and is the front door.\n\nEvery premium call settles via x402 micropayments on Base L2 in USDC; 75% of each settled call flows to the member as Identity Income, your identity earns. ~Alter receives only its protocol cut. No custodian, no broker.\n\nAnonymous callers get L0 free tools. Authenticated agents register via `alter login` and reach L1-L5 via x402, with per-call pricing visible after sign-in. Member credentials are scoped to the caller's own data on all strict tools.\n\n42 publicly advertised tools, 33 free and 9 premium, across identity, assessment, matching, graph and trust. Streamable-HTTP MCP transport at https://mcp.truealter.com/api/v1/mcp. Apache-2.0 SDK."
+}

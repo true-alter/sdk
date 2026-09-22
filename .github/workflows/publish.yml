@@ -1,0 +1,278 @@
+name: Publish
+
+# THE CUT IS STAGED, NOT RELEASED. A run stages the version and a maintainer
+# approves it with 2FA before it reaches installers, which is the only thing
+# this package's trusted publisher permits. The reasoning sits on the staging
+# step rather than being repeated here.
+#
+# The npm release for @truealter/sdk runs here, in this public repository. npm
+# provenance attestation binds to the CI run's own OIDC identity, and that
+# identity has to belong to a public repository for the attestation to mean
+# anything, so the release step has to live in one.
+#
+# What ships is always export/main, whatever ref this workflow is started
+# from. That branch is written by automation only, as a squashed snapshot of
+# the release-ready source, and it is not this repository's default branch. Do
+# not push export/main by hand: every commit that reaches it has already been
+# built and checked against that exact tree, and a hand-pushed commit would
+# skip all of it.
+#
+# The trigger is a dispatch rather than a push to export/main, because a
+# push-triggered workflow is read from the tree of the branch that was pushed.
+# export/main carries only the releasable source subset and no .github/ at
+# all, so this file is not on it and a push there would start nothing. A
+# dispatch resolves the workflow from the ref it is given, which keeps this
+# file on the default branch where it is reviewed. The release job dispatches
+# it once its export push has succeeded, so a failed export cannot reach npm.
+#
+# BOTH TRIGGERS ARE DECLARED AND BOTH ARE REQUIRED. A release arrives as a
+# repository_dispatch carrying the event type named below, and a repository
+# dispatch cannot start a workflow that does not name that event: it returns
+# 204 either way, so a missing declaration fails silently and green.
+# workflow_dispatch stays for a maintainer running the workflow by hand.
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [sdk-export-published]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Job-level, so the widening is scoped to the one job that needs it and
+    # the workflow default above stays read. `contents: write` is what the
+    # release step below needs and nothing else here uses it. `id-token` is
+    # repeated because a job-level block REPLACES the workflow default rather
+    # than adding to it, and dropping it would silently break the OIDC that
+    # trusted publishing depends on.
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: export/main
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # The npm a Node image happens to carry is not a floor. npm's OIDC
+      # exchange with the registry arrived in 11.5.1, and this step makes the
+      # version a fact in the log rather than something a later reader has to
+      # go and find. It takes the npm version off the table as an explanation
+      # for a refused exchange; it is not itself a fix for one.
+      #
+      # STAGING RAISES THE FLOOR TO 11.15.0, so the `stage` command is
+      # asserted rather than hoped for. A too-old npm treats it as an unknown
+      # argument and fails late with a message about the argument instead of
+      # about the version.
+      - name: Say which npm is publishing, and meet staged publishing's floor
+        run: |
+          set -euo pipefail
+          npm install -g npm@latest
+          npm --version
+          node --version
+          npm stage --help >/dev/null 2>&1 || {
+            echo "::error::publish: this npm has no stage command. Needs 11.15.0 or newer."
+            exit 1
+          }
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm run typecheck
+
+      # NO `npm test` HERE, AND ITS ABSENCE IS THE DESIGN. The export
+      # deliberately omits tests/ from the curated subset: a fixture is
+      # written to be realistic, and npm never receives one either way,
+      # because the package `files` field is an allowlist of dist/, README and
+      # LICENSE. So export/main carries no test files at all and vitest exits
+      # 1 on finding none. A test step here and a tests-free export are
+      # mutually unsatisfiable. The suite runs against this exact tree before
+      # the export is cut, which is the same reasoning the header already
+      # gives for trusting export/main at all, and typecheck and build below
+      # still run against the exported source. Restoring this step means
+      # exporting tests/ first.
+
+      - run: npm run build
+
+      - name: Pre-publish sanity (packed tarball has a real dist/)
+        run: |
+          set -euo pipefail
+          npm pack
+          tarball=$(ls truealter-sdk-*.tgz)
+          tmp=$(mktemp -d)
+          tar -xzf "$tarball" -C "$tmp"
+          if [ ! -d "$tmp/package/dist" ]; then
+            echo "::error::publish: packed SDK tarball has no package/dist. Refusing to publish."
+            exit 1
+          fi
+          rm -rf "$tmp"
+          # The tarball is KEPT now, where it used to be deleted. `npm stage
+          # publish` takes the tarball as its argument, so the bytes checked
+          # here are the bytes that go to the registry. Deleting it and
+          # letting the stage step re-pack would put a second, unchecked
+          # tarball on the wire.
+
+      - name: Stage the cut for approval
+        # This repo carries no secrets. Authentication is npm's OIDC trusted
+        # publishing, which is why the job needs id-token: write and no token.
+        # Trusted publishing is configured per package against one repository
+        # and one workflow path, so this file's path is part of that config.
+        #
+        # THE CUT IS STAGED, AND THAT IS THE ONLY THING THE BINDING PERMITS.
+        # This package's trusted publisher is configured for the staged form
+        # only. The unstaged form under that binding is refused with `403 OIDC
+        # permission denied for this action`, so the shape of this step
+        # matches a configuration that is already live.
+        #
+        # IT CHANGES RELEASE SEMANTICS AND THAT IS THE POINT. A staged cut
+        # reaches installers only when a maintainer approves it with 2FA, so
+        # no SDK version goes live unattended.
+        #
+        # `StagePublish` extends `Publish` with `static stage = true`, so it
+        # inherits the same `oidc()` call and the same `--provenance` support.
+        # The staging path is not a second, weaker route, and everything the
+        # exchange commentary below says still applies to it unchanged.
+        #
+        # --loglevel verbose IS THE POINT OF THIS STEP AND IS NOT DEBUG RESIDUE.
+        # npm attempts the OIDC exchange unconditionally and it is written never
+        # to throw: every way it can fail returns undefined behind a log.verbose
+        # or log.silly line that a default run never prints (npm/cli, lib/utils/
+        # oidc.js). setup-node writes an .npmrc reading
+        # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN} and, with no secret
+        # to fill it, sets that variable to the literal placeholder
+        # XXXXX-XXXXX-XXXXX-XXXXX. So a refused exchange does not stop the step,
+        # it falls through to the registry under a placeholder token, and the
+        # registry answers `404 Not Found - PUT` on a package that is plainly
+        # there. Verbose is what turns the registry's own rejection message
+        # into something the log says out loud.
+        #
+        # VERBOSE MAKES THE CAUSE PRINTABLE. THE ASSERTION BELOW MAKES IT THE
+        # VERDICT. A refused exchange prints `npm verbose oidc Failed token
+        # exchange request ...` and then fails with `404 Not Found - PUT`,
+        # which describes the unauthenticated retry rather than the fault. So
+        # the log is captured, replayed in full, and searched for the
+        # exchange's own refusal, which is reported as the error whatever
+        # npm's own status happens to be.
+        #
+        # The capture keeps the step's real status for every other failure, so
+        # a genuine error still fails with its own message and this adds
+        # nothing to it.
+        #
+        # IDEMPOTENT ON THE LIVE SIDE ONLY. A re-dispatch on a version already
+        # live stands down. A version already sitting in the stage is NOT
+        # handled, deliberately: inventing a parse for `npm stage list`'s
+        # output would be a guess in the one step that must not guess. A
+        # duplicate stage fails with the registry's own message, which is
+        # legible.
+        run: |
+          set -uo pipefail
+          version=$(node -p "require('./package.json').version")
+          if npm view "@truealter/sdk@${version}" version >/dev/null 2>&1; then
+            echo "@truealter/sdk@${version} is already live on the registry, nothing to stage."
+            exit 0
+          fi
+          tarball=$(ls truealter-sdk-*.tgz)
+          status=0
+          npm stage publish "$tarball" --access public --provenance --tag latest \
+            --loglevel verbose > publish.log 2>&1 || status=$?
+          cat publish.log
+          if grep -q 'Failed token exchange request' publish.log; then
+            line=$(grep -m1 'Failed token exchange request' publish.log)
+            echo "::error::publish: the registry REFUSED the OIDC exchange, so npm fell through to an unauthenticated PUT and the status below describes that retry, not the fault. ${line}"
+            exit 1
+          fi
+          if [ "$status" -eq 0 ]; then
+            echo "publish: staged ${version} with tag latest. It is NOT live until approved with 2FA."
+          fi
+          exit "$status"
+
+      - name: Cut the GitHub release for this version
+        # The npm `repository` field points here, so this is the page a reader
+        # reaches from the package listing. A release per version is what
+        # makes that page say which source was cut and when.
+        #
+        # THE TAG GOES ON export/main, WHICH IS NOT THIS REPO'S DEFAULT BRANCH.
+        # That is deliberate and it is what the checkout above already reads.
+        # export/main is the curated snapshot the publish is cut from, so it
+        # is the only ref where a tag names the bytes that reached npm.
+        #
+        # IDEMPOTENT. A re-dispatch on a version already tagged stands down
+        # rather than failing, which matters because the stage above is not
+        # idempotent and a re-run reaches here only after it succeeded.
+        #
+        # THE RELEASE IS CUT EVEN THOUGH THE NPM CUT IS ONLY STAGED. The tag
+        # records which source was cut, which is true the moment the export
+        # lands and stays true whether or not the stage is approved, and the
+        # body says plainly whether installers have it yet.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release: ${tag} already exists, nothing to cut."
+            exit 0
+          fi
+          if npm view "@truealter/sdk@${version}" version >/dev/null 2>&1; then
+            state="is live on npm with provenance."
+          else
+            state="is staged on npm and reaches installers when a maintainer approves it with 2FA."
+          fi
+          sha=$(git rev-parse HEAD)
+          notes=$(mktemp)
+          {
+            echo "\`@truealter/sdk@${version}\` ${state}"
+            echo
+            echo '```'
+            echo "npm install @truealter/sdk"
+            echo '```'
+            # This version's CHANGELOG section, keyed on the version and NOT
+            # on position, because the newest section in these files is
+            # `## [Unreleased]` and taking it would put unreleased work in
+            # every release note. Absent file or absent section yields zero
+            # bytes and the release goes out with the install line alone;
+            # export/main carries only the curated subset, so the file may
+            # genuinely not be here.
+            if [ -f CHANGELOG.md ]; then
+              body=$(awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} f && /^## /{exit} f{print}' CHANGELOG.md)
+              if [ -n "$body" ]; then
+                echo
+                echo "$body"
+              fi
+            fi
+          } > "$notes"
+          gh release create "$tag" --title "$tag" --notes-file "$notes" --target "$sha"
+          echo "release: cut ${tag} at ${sha} on export/main."
+
+      - name: Say what is now waiting on a human
+        # A staged cut that nobody is told about sits in the stage until it is
+        # forgotten. This is the only place the run says out loud that the
+        # version is not on installers' machines yet, and it stays silent once
+        # the version is live so a re-dispatch does not read as a fresh ask.
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          if npm view "@truealter/sdk@${version}" version >/dev/null 2>&1; then
+            exit 0
+          fi
+          {
+            echo "### @truealter/sdk ${version} is staged, not published"
+            echo
+            echo "It reaches installers only when you approve it with 2FA:"
+            echo
+            echo '```'
+            echo "npm stage list @truealter/sdk"
+            echo "npm stage view <stage-id>       # inspect before approving"
+            echo "npm stage approve <stage-id>    # prompts for 2FA, publishes"
+            echo "npm stage reject <stage-id>     # discard"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
