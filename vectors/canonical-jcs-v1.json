@@ -1,0 +1,159 @@
+{
+  "suite": "alter-canonical-jcs-v1",
+  "basis": "RFC 8785 (JCS), with the profile bounds stated below",
+  "profile": {
+    "member_order": "UTF-16 code unit",
+    "numbers": "ECMAScript Number::toString, finite doubles and integers to 2^53-1",
+    "strings": "RFC 8785 3.2.2.2 escapes; non-ASCII raw",
+    "max_depth": 64,
+    "refused": [
+      "unpaired surrogate, in a value or a member name",
+      "duplicate member name, compared after escape decoding",
+      "integer magnitude past 2^53-1",
+      "non-finite number",
+      "container nesting past max_depth"
+    ]
+  },
+  "reading": "Parse `json` with a strict parser, canonicalise, and compare against `canonical` byte for byte and `sha256` hex. `json` is given as text so both languages parse identical bytes. A `refuse` case must raise; a digest for one is a conformance failure, not a near miss.",
+  "accept": [
+    {
+      "id": "empty-object",
+      "why": "the degenerate case, and the digest every empty args map carries",
+      "json": "{}",
+      "canonical": "{}",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "id": "empty-array",
+      "why": "an empty container inside an object",
+      "json": "{\"a\":[]}",
+      "canonical": "{\"a\":[]}",
+      "sha256": "50e8660084976a10f0b3b9b3a6352d5881cbd219b5587a26224971a60ff2cc55"
+    },
+    {
+      "id": "scalars",
+      "why": "null, both booleans, a string",
+      "json": "{\"n\":null,\"t\":true,\"f\":false,\"s\":\"x\"}",
+      "canonical": "{\"f\":false,\"n\":null,\"s\":\"x\",\"t\":true}",
+      "sha256": "6d283910f0e0790b65d046a4a1defef5739a6da7d9647f313181af7c4c1639e3"
+    },
+    {
+      "id": "key-order-ascii",
+      "why": "plain ASCII names, where code point and code unit agree and both implementations always did",
+      "json": "{\"b\":1,\"a\":2,\"C\":3,\"_\":4}",
+      "canonical": "{\"C\":3,\"_\":4,\"a\":2,\"b\":1}",
+      "sha256": "79264b09e7f840c2e1d37b8fe970fd7020b765fe2214cf69465a676582f3ae18"
+    },
+    {
+      "id": "key-order-rfc8785-3.2.3",
+      "why": "RFC 8785 section 3.2.3's own sorting vector. THE case that separates a correct canonicaliser from a plausible one: sorted by code point U+1F600 follows U+FB33, sorted by UTF-16 code unit as JCS requires it precedes it",
+      "json": "{\"\\u20ac\":\"Euro Sign\",\"\\r\":\"Carriage Return\",\"\\ufb33\":\"Hebrew Letter Dalet With Dagesh\",\"1\":\"One\",\"\\ud83d\\ude00\":\"Emoji: Grinning Face\",\"\\u0080\":\"Control\",\"\\u00f6\":\"Latin Small Letter O With Diaeresis\"}",
+      "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"\ud83d\ude00\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}",
+      "sha256": "5e321556d22018a9656991a9e94f77ec175fa193e52a2429d312f8419ec8b08c"
+    },
+    {
+      "id": "key-order-nonbmp-vs-pua",
+      "why": "the narrowest reproduction of the same disagreement, and the one reported from outside: a non-BMP name against a private-use-area name",
+      "json": "{\"\\ud83d\\ude00\":1,\"\\ue000\":2,\"\\ufffd\":3,\"a\":4}",
+      "canonical": "{\"a\":4,\"\ud83d\ude00\":1,\"\":2,\"�\":3}",
+      "sha256": "6ac8711f344af3c0591ad72732263f5befa0231e798d1d4e144885bf21f52a2f"
+    },
+    {
+      "id": "number-small-decimals",
+      "why": "the window where repr and ECMAScript lay the same digits out differently. 1e-5 and 1e-6 render as plain decimals in ECMAScript and as exponentials in repr",
+      "json": "{\"a\":1e-5,\"b\":1e-6,\"c\":1e-7,\"d\":1.5e-7,\"e\":1e-4}",
+      "canonical": "{\"a\":0.00001,\"b\":0.000001,\"c\":1e-7,\"d\":1.5e-7,\"e\":0.0001}",
+      "sha256": "5c063857b5ec7d09a6f22a3d093b1e9afe893813765ecb3f511a2e2e58f0e5c3"
+    },
+    {
+      "id": "number-exponent-padding",
+      "why": "repr zero-pads a single-digit exponent, ECMAScript does not",
+      "json": "{\"a\":1e-7,\"b\":1e-21,\"c\":5e-324}",
+      "canonical": "{\"a\":1e-7,\"b\":1e-21,\"c\":5e-324}",
+      "sha256": "7b813be2acc4a350f68c3cf38692da6270beb73d98dec0a0cccd25cb904fdfdf"
+    },
+    {
+      "id": "number-large",
+      "why": "the other end of the same switch: 1e20 is written out in full, 1e21 is not",
+      "json": "{\"a\":1e20,\"b\":1e21,\"c\":9007199254740991}",
+      "canonical": "{\"a\":100000000000000000000,\"b\":1e+21,\"c\":9007199254740991}",
+      "sha256": "acf5ad0ce63526431aaf494be888a9bf9f8db53ac4a66e2e8216ef193d4ed7ef"
+    },
+    {
+      "id": "number-integral-float",
+      "why": "1.0 and 1 denote one number and share one canonical form. repr does not agree",
+      "json": "{\"a\":1.0,\"b\":1,\"c\":-0.0,\"d\":123456789.0}",
+      "canonical": "{\"a\":1,\"b\":1,\"c\":0,\"d\":123456789}",
+      "sha256": "9079db8822a5f6eb610580db8ef2f1686c721cbca4a26cec24a15bfa0abae933"
+    },
+    {
+      "id": "number-fractional",
+      "why": "ordinary fractions, where the two have always agreed",
+      "json": "{\"a\":0.1,\"b\":0.5,\"c\":-2.25,\"d\":3.141592653589793}",
+      "canonical": "{\"a\":0.1,\"b\":0.5,\"c\":-2.25,\"d\":3.141592653589793}",
+      "sha256": "c96acf2bb6aa615d0cee1e8a37987d0501edd499db41af63dec364312b2fc554"
+    },
+    {
+      "id": "string-control-escapes",
+      "why": "the two-character escapes and the \\uXXXX fallback, per RFC 8785 3.2.2.2",
+      "json": "{\"a\":\"\\u0000\\u0001\\b\\t\\n\\f\\r\\u001f\\\"\\\\\"}",
+      "canonical": "{\"a\":\"\\u0000\\u0001\\b\\t\\n\\f\\r\\u001f\\\"\\\\\"}",
+      "sha256": "b28e36e1bebbd7e8c3ff9e6eedb25136e31b7556c78b5620a59129aac5b759e4"
+    },
+    {
+      "id": "string-non-ascii-passthrough",
+      "why": "non-ASCII is emitted raw, never re-escaped. An en-dash, an accent, an emoji",
+      "json": "{\"a\":\"\\u2013 caf\\u00e9 \\ud83d\\ude00\"}",
+      "canonical": "{\"a\":\"– café \ud83d\ude00\"}",
+      "sha256": "7eee0a5360c89909d8d13a7d66cd1947798357d5b2b457fb85445ca053716b4a"
+    },
+    {
+      "id": "string-del-and-nbsp",
+      "why": "U+007F and U+00A0 are NOT escaped by either side, which is easy to get wrong",
+      "json": "{\"a\":\"\\u007f\\u00a0\"}",
+      "canonical": "{\"a\":\" \"}",
+      "sha256": "7032ff60a64fb8dd6f7c743515608aa307281caafdeb5d2d7640a201e753b0f2"
+    },
+    {
+      "id": "nested",
+      "why": "recursion through arrays and objects, with the sort applied at every depth",
+      "json": "{\"z\":[{\"b\":1,\"a\":2},[1,[2,[3]]]],\"a\":{\"y\":{\"x\":[true,null]}}}",
+      "canonical": "{\"a\":{\"y\":{\"x\":[true,null]}},\"z\":[{\"a\":2,\"b\":1},[1,[2,[3]]]]}",
+      "sha256": "e7ded7e8cf0e587f09ef5304a6362dc0cf9396151a7bbffaef787ed8be0c5a07"
+    },
+    {
+      "id": "tool-args-realistic",
+      "why": "the shape this actually runs on: an MCP tool-args map",
+      "json": "{\"handle\":\"~ada\",\"limit\":25,\"filters\":{\"since\":\"2026-09-17\",\"kind\":\"handover\"},\"verbose\":false}",
+      "canonical": "{\"filters\":{\"kind\":\"handover\",\"since\":\"2026-09-17\"},\"handle\":\"~ada\",\"limit\":25,\"verbose\":false}",
+      "sha256": "e2507c0686a6222b5c80f9c7a557fd0b05d4a476176ca3811b575d79c68c4840"
+    }
+  ],
+  "refuse": [
+    {
+      "id": "refuse-unpaired-high-surrogate",
+      "why": "a lone high surrogate has no UTF-8 encoding. The old json.dumps form raised UnicodeEncodeError here and reached the caller as a 500",
+      "json": "{\"a\":\"\\ud800\"}"
+    },
+    {
+      "id": "refuse-unpaired-low-surrogate",
+      "why": "the same, on the low half",
+      "json": "{\"a\":\"\\udc00\"}"
+    },
+    {
+      "id": "refuse-surrogate-in-member-name",
+      "why": "the same, in a member name rather than a value",
+      "json": "{\"\\ud800\":1}"
+    },
+    {
+      "id": "refuse-duplicate-member",
+      "why": "duplicate names compared after escape decoding, so a and \\u0061 collide. Only reachable through parse_strict; a parsed value cannot show them",
+      "json": "{\"a\":1,\"\\u0061\":2}"
+    },
+    {
+      "id": "refuse-integer-past-2-53",
+      "why": "a peer reading this as a double would round it, so the digests would diverge however this side rendered it. RFC 8785 puts the range out of scope",
+      "json": "{\"a\":9007199254740992}"
+    }
+  ]
+}
